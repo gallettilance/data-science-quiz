@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Science Quiz</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- MathJax for LaTeX rendering -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Landing Screen -->
+        <div id="start-screen" class="screen active">
+            <div class="hero">
+                <div class="logo">
+                    <span class="bracket">[</span>
+                    <span class="logo-text">DS</span>
+                    <span class="bracket">]</span>
+                </div>
+                <h1>Data Science Quiz</h1>
+                <p class="subtitle">Test your knowledge across clustering, classification, regression, and more.</p>
+                
+                <div class="topic-selector">
+                    <div class="topic-selector-header">
+                        <h3>Select Topics</h3>
+                        <div class="topic-actions">
+                            <button id="select-all-btn" class="btn-small">Select All</button>
+                            <button id="deselect-all-btn" class="btn-small">Deselect All</button>
+                        </div>
+                    </div>
+                    <div id="topic-checkboxes" class="topic-checkboxes">
+                        <!-- Topics will be populated by JavaScript -->
+                    </div>
+                    <p id="topic-warning" class="topic-warning hidden">Please select at least one topic</p>
+                </div>
+                
+                <button id="start-btn" class="btn-primary">
+                    <span>Start Quiz</span>
+                    <span class="arrow">→</span>
+                </button>
+                <p class="info">10 random questions • Multiple choice • Instant feedback</p>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="screen">
+            <div class="quiz-header">
+                <div class="progress-info">
+                    <span id="question-counter">Question 1 of 10</span>
+                    <span id="topic-badge" class="topic-badge">Topic</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div class="question-card">
+                <div id="question-text" class="question-text"></div>
+                <div id="question-image" class="question-image"></div>
+                <div id="choices" class="choices"></div>
+            </div>
+            
+            <div class="quiz-footer">
+                <button id="next-btn" class="btn-primary" disabled>
+                    <span>Next Question</span>
+                    <span class="arrow">→</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="results-header">
+                <h2>Quiz Complete!</h2>
+                <div class="score-display">
+                    <div class="score-circle">
+                        <span id="score-number">0</span>
+                        <span class="score-total">/10</span>
+                    </div>
+                    <p id="score-message" class="score-message"></p>
+                </div>
+                
+                <!-- Rolling Average Stats -->
+                <div id="stats-display" class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-value" id="rolling-average">--%</span>
+                        <span class="stat-label">Rolling Average</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="quizzes-taken">0</span>
+                        <span class="stat-label">Quizzes Taken</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-correct">0</span>
+                        <span class="stat-label">Total Correct</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="results-review">
+                <h3>Review Your Answers</h3>
+                <div id="review-list" class="review-list"></div>
+            </div>
+            
+            <div class="results-footer">
+                <button id="restart-btn" class="btn-primary">
+                    <span>Try Again</span>
+                    <span class="arrow">↻</span>
+                </button>
+                <button id="clear-stats-btn" class="btn-small btn-danger">Clear History</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="questions.js"></script>
+    <script src="quiz.js"></script>
+</body>
+</html>
+
