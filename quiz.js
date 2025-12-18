@@ -1,14 +1,20 @@
 /**
- * Data Science Quiz - Main Logic
- * Handles quiz flow, randomization, scoring, topic selection, stats tracking, and UI updates
+ * Data Science Course & Quiz - Main Logic
+ * Handles course progression, video lessons, quiz flow, and progress tracking
  */
 
 const STORAGE_KEY = 'ds_quiz_history';
+const COURSE_PROGRESS_KEY = 'ds_course_progress';
 
-class Quiz {
-    constructor(questions, numQuestions = 10) {
+class DataScienceCourse {
+    constructor(questions, curriculum) {
         this.allQuestions = questions;
-        this.numQuestions = numQuestions;
+        this.curriculum = curriculum;
+        
+        // Quiz state
+        this.currentMode = null; // 'course' or 'practice'
+        this.currentLesson = null;
+        this.numQuestions = 10;
         this.currentQuestionIndex = 0;
         this.score = 0;
         this.selectedQuestions = [];
@@ -20,248 +26,532 @@ class Quiz {
     }
     
     init() {
-        // DOM Elements
-        this.startScreen = document.getElementById('start-screen');
+        this.cacheElements();
+        this.bindEvents();
+        this.loadCourseProgress();
+        this.initTopicSelector();
+        this.updateModeScreenPreviews();
+        this.loadYouTubeAPI();
+    }
+    
+    // ==========================================
+    // YOUTUBE API
+    // ==========================================
+    
+    loadYouTubeAPI() {
+        // Load the YouTube IFrame API script
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScript = document.getElementsByTagName('script')[0];
+        firstScript.parentNode.insertBefore(tag, firstScript);
+        
+        // Set up the callback for when API is ready
+        window.onYouTubeIframeAPIReady = () => {
+            this.ytApiReady = true;
+        };
+    }
+    
+    createYouTubePlayer(videoId) {
+        // Destroy existing player if any
+        if (this.ytPlayer) {
+            this.ytPlayer.destroy();
+            this.ytPlayer = null;
+        }
+        
+        // Clear any existing watch interval
+        if (this.videoWatchInterval) {
+            clearInterval(this.videoWatchInterval);
+            this.videoWatchInterval = null;
+        }
+        
+        // Hide placeholder, show player container
+        this.videoPlaceholder.style.display = 'none';
+        this.youtubePlayerContainer.style.display = 'block';
+        
+        // Create new player
+        this.ytPlayer = new YT.Player('youtube-player', {
+            height: '100%',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                'autoplay': 1,
+                'rel': 0,
+                'modestbranding': 1
+            },
+            events: {
+                'onStateChange': (event) => this.onPlayerStateChange(event)
+            }
+        });
+    }
+    
+    onPlayerStateChange(event) {
+        // YT.PlayerState.PLAYING = 1
+        if (event.data === 1) {
+            this.startWatchTracking();
+        } else {
+            this.stopWatchTracking();
+        }
+    }
+    
+    startWatchTracking() {
+        if (this.videoWatchInterval) return;
+        
+        this.videoWatchInterval = setInterval(() => {
+            if (!this.ytPlayer || !this.currentLesson) return;
+            
+            const currentTime = this.ytPlayer.getCurrentTime();
+            const duration = this.ytPlayer.getDuration();
+            
+            if (duration > 0) {
+                const watchedPercent = (currentTime / duration) * 100;
+                
+                // Mark as watched if they've watched 80%+ of the video
+                if (watchedPercent >= 80) {
+                    this.markVideoWatched(this.currentLesson.id);
+                    this.stopWatchTracking();
+                }
+            }
+        }, 2000); // Check every 2 seconds
+    }
+    
+    stopWatchTracking() {
+        if (this.videoWatchInterval) {
+            clearInterval(this.videoWatchInterval);
+            this.videoWatchInterval = null;
+        }
+    }
+    
+    markVideoWatched(lessonId) {
+        const progress = this.getCourseProgress();
+        if (!progress.videosWatched.includes(lessonId)) {
+            progress.videosWatched.push(lessonId);
+            this.saveCourseProgress(progress);
+            this.updateLessonProgress();
+        }
+    }
+    
+    isVideoWatched(lessonId) {
+        const progress = this.getCourseProgress();
+        return progress.videosWatched && progress.videosWatched.includes(lessonId);
+    }
+    
+    isQuizPassed(lessonId) {
+        const progress = this.getCourseProgress();
+        return progress.completed && progress.completed.includes(lessonId);
+    }
+    
+    updateLessonProgress() {
+        if (!this.currentLesson) return;
+        
+        const videoWatched = this.isVideoWatched(this.currentLesson.id);
+        const quizPassed = this.isQuizPassed(this.currentLesson.id);
+        
+        // Update video step
+        if (videoWatched) {
+            this.stepVideo.classList.add('completed');
+        } else {
+            this.stepVideo.classList.remove('completed');
+        }
+        
+        // Update quiz step
+        if (quizPassed) {
+            this.stepQuiz.classList.add('completed');
+        } else {
+            this.stepQuiz.classList.remove('completed');
+        }
+    }
+    
+    // ==========================================
+    // DOM CACHING
+    // ==========================================
+    
+    cacheElements() {
+        // Screens
+        this.modeScreen = document.getElementById('mode-screen');
+        this.courseScreen = document.getElementById('course-screen');
+        this.lessonScreen = document.getElementById('lesson-screen');
+        this.practiceScreen = document.getElementById('practice-screen');
         this.quizScreen = document.getElementById('quiz-screen');
         this.resultsScreen = document.getElementById('results-screen');
         
-        this.startBtn = document.getElementById('start-btn');
-        this.nextBtn = document.getElementById('next-btn');
-        this.restartBtn = document.getElementById('restart-btn');
-        this.clearStatsBtn = document.getElementById('clear-stats-btn');
+        // Mode selection
+        this.courseModeCard = document.getElementById('course-mode-card');
+        this.practiceModeCard = document.getElementById('practice-mode-card');
+        this.courseProgressPreview = document.getElementById('course-progress-preview');
+        this.practiceStatsPreview = document.getElementById('practice-stats-preview');
         
+        // Course overview
+        this.backToModeBtn = document.getElementById('back-to-mode');
+        this.courseProgressFill = document.getElementById('course-progress-fill');
+        this.courseProgressText = document.getElementById('course-progress-text');
+        this.curriculumList = document.getElementById('curriculum-list');
+        
+        // Lesson screen
+        this.backToCourseBtn = document.getElementById('back-to-course');
+        this.lessonNumber = document.getElementById('lesson-number');
+        this.lessonTitle = document.getElementById('lesson-title');
+        this.lessonDescription = document.getElementById('lesson-description');
+        this.videoPlaceholder = document.getElementById('video-placeholder');
+        this.youtubePlayerContainer = document.getElementById('youtube-player');
+        this.takeQuizBtn = document.getElementById('take-quiz-btn');
+        this.stepVideo = document.getElementById('step-video');
+        this.stepQuiz = document.getElementById('step-quiz');
+        
+        // YouTube player state
+        this.ytPlayer = null;
+        this.ytApiReady = false;
+        this.videoWatchInterval = null;
+        
+        // Practice mode
+        this.backToModePracticeBtn = document.getElementById('back-to-mode-practice');
+        this.topicCheckboxes = document.getElementById('topic-checkboxes');
+        this.selectAllBtn = document.getElementById('select-all-btn');
+        this.deselectAllBtn = document.getElementById('deselect-all-btn');
+        this.topicWarning = document.getElementById('topic-warning');
+        this.startBtn = document.getElementById('start-btn');
+        
+        // Quiz screen
         this.questionCounter = document.getElementById('question-counter');
         this.topicBadge = document.getElementById('topic-badge');
         this.progressFill = document.getElementById('progress-fill');
         this.questionText = document.getElementById('question-text');
         this.questionImage = document.getElementById('question-image');
         this.choicesContainer = document.getElementById('choices');
+        this.nextBtn = document.getElementById('next-btn');
         
+        // Results screen
         this.scoreNumber = document.getElementById('score-number');
         this.scoreMessage = document.getElementById('score-message');
         this.scoreTotal = document.querySelector('.score-total');
-        this.reviewList = document.getElementById('review-list');
-        
-        // Stats elements
+        this.topicCompleteMsg = document.getElementById('topic-complete-msg');
         this.rollingAverageEl = document.getElementById('rolling-average');
         this.quizzesTakenEl = document.getElementById('quizzes-taken');
         this.totalCorrectEl = document.getElementById('total-correct');
+        this.reviewList = document.getElementById('review-list');
+        this.restartBtn = document.getElementById('restart-btn');
+        this.clearStatsBtn = document.getElementById('clear-stats-btn');
+    }
+    
+    // ==========================================
+    // EVENT BINDINGS
+    // ==========================================
+    
+    bindEvents() {
+        // Mode selection
+        this.courseModeCard.addEventListener('click', () => this.selectCourseMode());
+        this.practiceModeCard.addEventListener('click', () => this.selectPracticeMode());
         
-        // Topic selector elements
-        this.topicCheckboxes = document.getElementById('topic-checkboxes');
-        this.selectAllBtn = document.getElementById('select-all-btn');
-        this.deselectAllBtn = document.getElementById('deselect-all-btn');
-        this.topicWarning = document.getElementById('topic-warning');
+        // Course navigation
+        this.backToModeBtn.addEventListener('click', () => this.showScreen(this.modeScreen));
+        this.backToCourseBtn.addEventListener('click', () => this.showScreen(this.courseScreen));
+        this.backToModePracticeBtn.addEventListener('click', () => this.showScreen(this.modeScreen));
         
-        // Initialize topic selector
-        this.initTopicSelector();
+        // Video
+        this.videoPlaceholder.addEventListener('click', () => this.loadVideo());
+        this.takeQuizBtn.addEventListener('click', () => this.startLessonQuiz());
         
-        // Event Listeners
-        this.startBtn.addEventListener('click', () => this.startQuiz());
-        this.nextBtn.addEventListener('click', () => this.nextQuestion());
-        this.restartBtn.addEventListener('click', () => this.restartQuiz());
+        // Practice mode
         this.selectAllBtn.addEventListener('click', () => this.selectAllTopics());
         this.deselectAllBtn.addEventListener('click', () => this.deselectAllTopics());
+        this.startBtn.addEventListener('click', () => this.startPracticeQuiz());
         
+        // Quiz
+        this.nextBtn.addEventListener('click', () => this.nextQuestion());
+        this.restartBtn.addEventListener('click', () => this.handleRestart());
+        
+        // Stats
         if (this.clearStatsBtn) {
             this.clearStatsBtn.addEventListener('click', () => this.clearStats());
         }
     }
     
     // ==========================================
-    // STATS / LOCAL STORAGE METHODS
+    // SCREEN MANAGEMENT
     // ==========================================
     
-    /**
-     * Get quiz history from localStorage
-     */
-    getHistory() {
-        try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
-        } catch (e) {
-            console.error('Error reading quiz history:', e);
-            return [];
-        }
-    }
-    
-    /**
-     * Save quiz result to history
-     */
-    saveResult(score, total) {
-        try {
-            const history = this.getHistory();
-            history.push({
-                score: score,
-                total: total,
-                percentage: (score / total) * 100,
-                date: new Date().toISOString(),
-                topics: Array.from(this.selectedTopics)
-            });
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-        } catch (e) {
-            console.error('Error saving quiz result:', e);
-        }
-    }
-    
-    /**
-     * Calculate stats from history
-     */
-    getStats() {
-        const history = this.getHistory();
-        
-        if (history.length === 0) {
-            return {
-                rollingAverage: null,
-                quizzesTaken: 0,
-                totalCorrect: 0,
-                totalQuestions: 0
-            };
-        }
-        
-        const totalCorrect = history.reduce((sum, h) => sum + h.score, 0);
-        const totalQuestions = history.reduce((sum, h) => sum + h.total, 0);
-        const rollingAverage = (totalCorrect / totalQuestions) * 100;
-        
-        return {
-            rollingAverage: rollingAverage,
-            quizzesTaken: history.length,
-            totalCorrect: totalCorrect,
-            totalQuestions: totalQuestions
-        };
-    }
-    
-    /**
-     * Update stats display in results screen
-     */
-    updateStatsDisplay() {
-        const stats = this.getStats();
-        
-        if (this.rollingAverageEl) {
-            this.rollingAverageEl.textContent = stats.rollingAverage !== null 
-                ? `${stats.rollingAverage.toFixed(1)}%` 
-                : '--%';
-        }
-        
-        if (this.quizzesTakenEl) {
-            this.quizzesTakenEl.textContent = stats.quizzesTaken;
-        }
-        
-        if (this.totalCorrectEl) {
-            this.totalCorrectEl.textContent = `${stats.totalCorrect}/${stats.totalQuestions}`;
-        }
-    }
-    
-    /**
-     * Clear all stats history
-     */
-    clearStats() {
-        if (confirm('Are you sure you want to clear all quiz history? This cannot be undone.')) {
-            try {
-                localStorage.removeItem(STORAGE_KEY);
-                this.updateStatsDisplay();
-            } catch (e) {
-                console.error('Error clearing stats:', e);
-            }
-        }
-    }
-    
-    // ==========================================
-    // TOPIC SELECTOR METHODS
-    // ==========================================
-    
-    /**
-     * Initialize topic selector with checkboxes
-     */
-    initTopicSelector() {
-        // Get unique topics and count questions per topic
-        const topicCounts = {};
-        this.allQuestions.forEach(q => {
-            topicCounts[q.topic] = (topicCounts[q.topic] || 0) + 1;
+    showScreen(screen) {
+        [this.modeScreen, this.courseScreen, this.lessonScreen, 
+         this.practiceScreen, this.quizScreen, this.resultsScreen].forEach(s => {
+            if (s) s.classList.remove('active');
         });
+        screen.classList.add('active');
+    }
+    
+    // ==========================================
+    // MODE SELECTION
+    // ==========================================
+    
+    updateModeScreenPreviews() {
+        // Course progress preview - only count lessons with videos
+        // Fully complete = video watched AND quiz passed
+        const progress = this.getCourseProgress();
+        const lessonsWithVideos = this.curriculum.filter(l => this.hasVideo(l));
+        const fullyCompleted = lessonsWithVideos.filter(lesson => {
+            const quizPassed = progress.completed && progress.completed.includes(lesson.id);
+            const videoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
+            return quizPassed && videoWatched;
+        });
+        const completedCount = fullyCompleted.length;
+        const totalCount = lessonsWithVideos.length;
+        const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
         
-        // Sort topics alphabetically
-        const topics = Object.keys(topicCounts).sort();
+        const progressPreview = this.courseProgressPreview;
+        if (progressPreview) {
+            progressPreview.querySelector('.progress-text').textContent = 
+                totalCount > 0 
+                    ? `${completedCount} of ${totalCount} topics completed`
+                    : 'Coming soon';
+            progressPreview.querySelector('.progress-fill-mini').style.width = 
+                `${progressPercent}%`;
+        }
         
-        // Create checkboxes
-        this.topicCheckboxes.innerHTML = '';
-        topics.forEach(topic => {
-            const label = document.createElement('label');
-            label.className = 'topic-checkbox selected';
-            label.innerHTML = `
-                <input type="checkbox" value="${topic}" checked>
-                <span class="check-icon"></span>
-                <span class="topic-name">${topic}</span>
-                <span class="topic-count">(${topicCounts[topic]})</span>
+        // Practice stats preview
+        const stats = this.getStats();
+        const statsPreview = this.practiceStatsPreview;
+        if (statsPreview) {
+            statsPreview.querySelector('.stats-text').textContent = 
+                stats.rollingAverage !== null 
+                    ? `Rolling average: ${stats.rollingAverage.toFixed(1)}%`
+                    : 'Rolling average: --%';
+        }
+    }
+    
+    selectCourseMode() {
+        this.currentMode = 'course';
+        this.renderCurriculumList();
+        this.showScreen(this.courseScreen);
+    }
+    
+    selectPracticeMode() {
+        this.currentMode = 'practice';
+        this.showScreen(this.practiceScreen);
+    }
+    
+    // ==========================================
+    // COURSE PROGRESS (localStorage)
+    // ==========================================
+    
+    getCourseProgress() {
+        try {
+            const data = localStorage.getItem(COURSE_PROGRESS_KEY);
+            const defaults = { completed: [], currentLesson: 1, videosWatched: [] };
+            return data ? { ...defaults, ...JSON.parse(data) } : defaults;
+        } catch (e) {
+            console.error('Error reading course progress:', e);
+            return { completed: [], currentLesson: 1, videosWatched: [] };
+        }
+    }
+    
+    saveCourseProgress(progress) {
+        try {
+            localStorage.setItem(COURSE_PROGRESS_KEY, JSON.stringify(progress));
+        } catch (e) {
+            console.error('Error saving course progress:', e);
+        }
+    }
+    
+    loadCourseProgress() {
+        this.courseProgress = this.getCourseProgress();
+    }
+    
+    markLessonComplete(lessonId) {
+        const progress = this.getCourseProgress();
+        if (!progress.completed.includes(lessonId)) {
+            progress.completed.push(lessonId);
+        }
+        // Move to next lesson if this was the current one
+        if (lessonId === progress.currentLesson && lessonId < this.curriculum.length) {
+            progress.currentLesson = lessonId + 1;
+        }
+        this.saveCourseProgress(progress);
+        this.courseProgress = progress;
+    }
+    
+    // ==========================================
+    // COURSE OVERVIEW
+    // ==========================================
+    
+    hasVideo(lesson) {
+        return lesson.videoId && lesson.videoId !== 'YOUR_VIDEO_ID_HERE';
+    }
+    
+    renderCurriculumList() {
+        const progress = this.getCourseProgress();
+        
+        // Count only lessons with videos for progress
+        // A lesson is fully complete when both video is watched AND quiz is passed
+        const lessonsWithVideos = this.curriculum.filter(l => this.hasVideo(l));
+        const fullyCompleted = lessonsWithVideos.filter(lesson => {
+            const quizPassed = progress.completed && progress.completed.includes(lesson.id);
+            const videoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
+            return quizPassed && videoWatched;
+        });
+        const completedCount = fullyCompleted.length;
+        const totalCount = lessonsWithVideos.length;
+        
+        // Update progress bar
+        const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+        this.courseProgressFill.style.width = `${progressPercent}%`;
+        this.courseProgressText.textContent = totalCount > 0 
+            ? `${completedCount} of ${totalCount} available topics completed`
+            : 'No videos available yet';
+        
+        // Render curriculum items
+        this.curriculumList.innerHTML = '';
+        
+        this.curriculum.forEach((lesson, index) => {
+            const isQuizPassed = progress.completed && progress.completed.includes(lesson.id);
+            const isVideoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
+            const isCompleted = isQuizPassed && isVideoWatched; // Both required for full completion
+            const isCurrent = lesson.id === progress.currentLesson;
+            const isLocked = !this.hasVideo(lesson);
+            
+            const item = document.createElement('div');
+            item.className = 'curriculum-item';
+            if (isCompleted && !isLocked) item.classList.add('completed');
+            if (isCurrent && !isCompleted && !isLocked) item.classList.add('current');
+            if (isLocked) item.classList.add('locked');
+            
+            let statusText = '';
+            let statusIcons = '';
+            if (isLocked) {
+                statusText = '';
+            } else if (isCompleted) {
+                statusText = '✓ Complete';
+            } else {
+                // Show progress icons
+                const videoIcon = isVideoWatched ? '📹✓' : '📹';
+                const quizIcon = isQuizPassed ? '📝✓' : '📝';
+                statusIcons = `<span class="curriculum-icons">${videoIcon} ${quizIcon}</span>`;
+                if (isCurrent) {
+                    statusText = 'Continue';
+                }
+            }
+            
+            item.innerHTML = `
+                <span class="curriculum-number">${isCompleted && !isLocked ? '✓' : lesson.id}</span>
+                <div class="curriculum-info">
+                    <div class="curriculum-title">${lesson.title}</div>
+                    <div class="curriculum-topic">${lesson.topic}</div>
+                </div>
+                ${isLocked 
+                    ? '<span class="lock-icon">🔒</span>' 
+                    : (isCompleted 
+                        ? `<span class="curriculum-status">${statusText}</span>`
+                        : `<span class="curriculum-progress">${statusIcons}${statusText ? `<span class="curriculum-status">${statusText}</span>` : ''}</span>`)}
             `;
             
-            const checkbox = label.querySelector('input');
-            checkbox.addEventListener('change', () => {
-                this.toggleTopic(topic, checkbox.checked, label);
-            });
+            if (!isLocked) {
+                item.addEventListener('click', () => this.openLesson(lesson));
+            }
             
-            label.addEventListener('click', (e) => {
-                if (e.target !== checkbox) {
-                    e.preventDefault();
-                    checkbox.checked = !checkbox.checked;
-                    this.toggleTopic(topic, checkbox.checked, label);
-                }
-            });
-            
-            this.topicCheckboxes.appendChild(label);
-            this.selectedTopics.add(topic);
+            this.curriculumList.appendChild(item);
         });
     }
     
-    /**
-     * Toggle a topic selection
-     */
-    toggleTopic(topic, isSelected, label) {
-        if (isSelected) {
-            this.selectedTopics.add(topic);
-            label.classList.add('selected');
-        } else {
-            this.selectedTopics.delete(topic);
-            label.classList.remove('selected');
+    // ==========================================
+    // VIDEO LESSON
+    // ==========================================
+    
+    openLesson(lesson) {
+        this.currentLesson = lesson;
+        
+        this.lessonNumber.textContent = `Lesson ${lesson.id}`;
+        this.lessonTitle.textContent = lesson.title;
+        this.lessonDescription.textContent = lesson.description;
+        
+        // Reset video state
+        if (this.ytPlayer) {
+            this.ytPlayer.destroy();
+            this.ytPlayer = null;
         }
-        this.topicWarning.classList.add('hidden');
+        this.stopWatchTracking();
+        
+        // Reset placeholder
+        this.videoPlaceholder.innerHTML = `
+            <span class="play-icon">▶</span>
+            <span>Click to load video</span>
+        `;
+        this.videoPlaceholder.style.display = '';
+        this.youtubePlayerContainer.style.display = 'none';
+        this.youtubePlayerContainer.innerHTML = '';
+        
+        // Update lesson progress indicators
+        this.updateLessonProgress();
+        
+        this.showScreen(this.lessonScreen);
     }
     
-    /**
-     * Select all topics
-     */
-    selectAllTopics() {
-        const checkboxes = this.topicCheckboxes.querySelectorAll('.topic-checkbox');
-        checkboxes.forEach(label => {
-            const checkbox = label.querySelector('input');
-            const topic = checkbox.value;
-            checkbox.checked = true;
-            this.selectedTopics.add(topic);
-            label.classList.add('selected');
-        });
-        this.topicWarning.classList.add('hidden');
-    }
-    
-    /**
-     * Deselect all topics
-     */
-    deselectAllTopics() {
-        const checkboxes = this.topicCheckboxes.querySelectorAll('.topic-checkbox');
-        checkboxes.forEach(label => {
-            const checkbox = label.querySelector('input');
-            checkbox.checked = false;
-            label.classList.remove('selected');
-        });
-        this.selectedTopics.clear();
+    loadVideo() {
+        if (!this.currentLesson) return;
+        
+        if (this.hasVideo(this.currentLesson)) {
+            if (this.ytApiReady) {
+                this.createYouTubePlayer(this.currentLesson.videoId);
+            } else {
+                // API not ready yet, use fallback iframe
+                this.videoPlaceholder.style.display = 'none';
+                this.youtubePlayerContainer.style.display = 'block';
+                this.youtubePlayerContainer.innerHTML = `
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        src="https://www.youtube.com/embed/${this.currentLesson.videoId}?autoplay=1"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>
+                `;
+            }
+        } else {
+            // No video configured - show message
+            this.videoPlaceholder.innerHTML = `
+                <span class="play-icon">📹</span>
+                <span>Video not yet configured</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Add video ID to curriculum.js</span>
+            `;
+        }
     }
     
     // ==========================================
-    // QUIZ FLOW METHODS
+    // QUIZ LOGIC
     // ==========================================
     
-    /**
-     * Shuffle array using Fisher-Yates algorithm
-     */
+    startLessonQuiz() {
+        // Set up quiz for the current lesson's topic
+        this.selectedTopics = new Set([this.currentLesson.topic]);
+        this.selectQuestions();
+        this.startQuiz();
+    }
+    
+    startPracticeQuiz() {
+        // Validate topic selection
+        if (this.selectedTopics.size === 0) {
+            this.topicWarning.classList.remove('hidden');
+            return;
+        }
+        
+        this.selectQuestions();
+        this.startQuiz();
+    }
+    
+    startQuiz() {
+        this.currentQuestionIndex = 0;
+        this.score = 0;
+        this.userAnswers = [];
+        
+        // Update score total display
+        if (this.scoreTotal) {
+            this.scoreTotal.textContent = `/${this.actualNumQuestions}`;
+        }
+        
+        // Reset next button
+        this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
+        
+        this.showScreen(this.quizScreen);
+        this.displayQuestion();
+    }
+    
     shuffle(array) {
         const arr = [...array];
         for (let i = arr.length - 1; i > 0; i--) {
@@ -271,9 +561,6 @@ class Quiz {
         return arr;
     }
     
-    /**
-     * Select random questions from the pool based on selected topics
-     */
     selectQuestions() {
         // Filter by selected topics
         const filteredQuestions = this.allQuestions.filter(q => 
@@ -283,48 +570,9 @@ class Quiz {
         const shuffled = this.shuffle(filteredQuestions);
         const actualNum = Math.min(this.numQuestions, shuffled.length);
         this.selectedQuestions = shuffled.slice(0, actualNum);
-        
-        // Update the actual number for display
         this.actualNumQuestions = actualNum;
     }
     
-    /**
-     * Switch between screens
-     */
-    showScreen(screen) {
-        [this.startScreen, this.quizScreen, this.resultsScreen].forEach(s => {
-            s.classList.remove('active');
-        });
-        screen.classList.add('active');
-    }
-    
-    /**
-     * Start the quiz
-     */
-    startQuiz() {
-        // Validate topic selection
-        if (this.selectedTopics.size === 0) {
-            this.topicWarning.classList.remove('hidden');
-            return;
-        }
-        
-        this.currentQuestionIndex = 0;
-        this.score = 0;
-        this.userAnswers = [];
-        this.selectQuestions();
-        
-        // Update score total display
-        if (this.scoreTotal) {
-            this.scoreTotal.textContent = `/${this.actualNumQuestions}`;
-        }
-        
-        this.showScreen(this.quizScreen);
-        this.displayQuestion();
-    }
-    
-    /**
-     * Display the current question
-     */
     displayQuestion() {
         this.answered = false;
         this.nextBtn.disabled = true;
@@ -352,8 +600,6 @@ class Quiz {
             ...question.alternatives.map(alt => ({ text: alt, isCorrect: false }))
         ];
         const shuffledChoices = this.shuffle(allChoices);
-        
-        // Store correct index for this display
         question.shuffledChoices = shuffledChoices;
         
         // Render choices
@@ -379,9 +625,6 @@ class Quiz {
         }
     }
     
-    /**
-     * Handle answer selection
-     */
     selectAnswer(button, choice, question) {
         if (this.answered) return;
         this.answered = true;
@@ -426,9 +669,6 @@ class Quiz {
         }
     }
     
-    /**
-     * Move to next question or show results
-     */
     nextQuestion() {
         this.currentQuestionIndex++;
         
@@ -439,13 +679,10 @@ class Quiz {
         }
     }
     
-    /**
-     * Display results screen
-     */
     showResults() {
         this.showScreen(this.resultsScreen);
         
-        // Save this quiz result to history (only completed quizzes count)
+        // Save result
         this.saveResult(this.score, this.actualNumQuestions);
         
         // Update score
@@ -470,13 +707,38 @@ class Quiz {
         }
         this.scoreMessage.textContent = message;
         
-        // Update rolling average stats
-        this.updateStatsDisplay();
+        // Course mode: mark quiz as passed if score >= 80% (8/10)
+        if (this.currentMode === 'course' && this.currentLesson && percentage >= 80) {
+            this.markLessonComplete(this.currentLesson.id);
+            
+            // Check if fully complete (video watched + quiz passed)
+            const videoWatched = this.isVideoWatched(this.currentLesson.id);
+            if (videoWatched) {
+                this.topicCompleteMsg.innerHTML = '<span class="complete-icon">✓</span><span>Topic fully complete!</span>';
+            } else {
+                this.topicCompleteMsg.innerHTML = '<span class="complete-icon">📝</span><span>Quiz passed! Watch the video to complete this topic.</span>';
+            }
+            this.topicCompleteMsg.classList.remove('hidden');
+        } else {
+            this.topicCompleteMsg.classList.add('hidden');
+        }
         
-        // Progress to 100%
+        // Update stats
+        this.updateStatsDisplay();
+        this.updateModeScreenPreviews();
+        
+        // Progress bar to 100%
         this.progressFill.style.width = '100%';
         
         // Build review list
+        this.buildReviewList();
+        
+        // Update continue button text based on mode
+        const continueText = this.currentMode === 'course' ? 'Continue Course' : 'Continue';
+        this.restartBtn.querySelector('span:first-child').textContent = continueText;
+    }
+    
+    buildReviewList() {
         this.reviewList.innerHTML = '';
         
         this.userAnswers.forEach((answer, index) => {
@@ -486,7 +748,6 @@ class Quiz {
             const statusIcon = answer.wasCorrect ? '✓' : '✗';
             const statusClass = answer.wasCorrect ? 'correct' : 'incorrect';
             
-            // Truncate question for header
             const questionPreview = answer.question.question.length > 80 
                 ? answer.question.question.substring(0, 80) + '...'
                 : answer.question.question;
@@ -522,11 +783,9 @@ class Quiz {
                 </div>
             `;
             
-            // Toggle expand/collapse
             const header = item.querySelector('.review-header');
             header.addEventListener('click', () => {
                 item.classList.toggle('expanded');
-                // Re-render MathJax when expanded
                 if (item.classList.contains('expanded') && window.MathJax) {
                     MathJax.typesetPromise([item]).catch(err => console.log('MathJax:', err));
                 }
@@ -535,7 +794,6 @@ class Quiz {
             this.reviewList.appendChild(item);
         });
         
-        // Re-render MathJax for visible content
         if (window.MathJax) {
             MathJax.typesetPromise([this.reviewList]).catch(err => {
                 console.log('MathJax rendering:', err);
@@ -543,25 +801,189 @@ class Quiz {
         }
     }
     
-    /**
-     * Restart the quiz - go back to start screen with previous topic selection
-     */
-    restartQuiz() {
-        // Reset next button text
+    handleRestart() {
         this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
-        // Reset progress bar
         this.progressFill.style.width = '0%';
-        // Go back to start screen (topics are already pre-selected)
-        this.showScreen(this.startScreen);
+        
+        if (this.currentMode === 'course') {
+            this.renderCurriculumList();
+            this.showScreen(this.courseScreen);
+        } else {
+            this.showScreen(this.practiceScreen);
+        }
+    }
+    
+    // ==========================================
+    // TOPIC SELECTOR (Practice Mode)
+    // ==========================================
+    
+    initTopicSelector() {
+        // Get unique topics and count
+        const topicCounts = {};
+        this.allQuestions.forEach(q => {
+            topicCounts[q.topic] = (topicCounts[q.topic] || 0) + 1;
+        });
+        
+        const topics = Object.keys(topicCounts).sort();
+        
+        this.topicCheckboxes.innerHTML = '';
+        topics.forEach(topic => {
+            const label = document.createElement('label');
+            label.className = 'topic-checkbox selected';
+            label.innerHTML = `
+                <input type="checkbox" value="${topic}" checked>
+                <span class="check-icon"></span>
+                <span class="topic-name">${topic}</span>
+                <span class="topic-count">(${topicCounts[topic]})</span>
+            `;
+            
+            const checkbox = label.querySelector('input');
+            checkbox.addEventListener('change', () => {
+                this.toggleTopic(topic, checkbox.checked, label);
+            });
+            
+            label.addEventListener('click', (e) => {
+                if (e.target !== checkbox) {
+                    e.preventDefault();
+                    checkbox.checked = !checkbox.checked;
+                    this.toggleTopic(topic, checkbox.checked, label);
+                }
+            });
+            
+            this.topicCheckboxes.appendChild(label);
+            this.selectedTopics.add(topic);
+        });
+    }
+    
+    toggleTopic(topic, isSelected, label) {
+        if (isSelected) {
+            this.selectedTopics.add(topic);
+            label.classList.add('selected');
+        } else {
+            this.selectedTopics.delete(topic);
+            label.classList.remove('selected');
+        }
+        this.topicWarning.classList.add('hidden');
+    }
+    
+    selectAllTopics() {
+        const checkboxes = this.topicCheckboxes.querySelectorAll('.topic-checkbox');
+        checkboxes.forEach(label => {
+            const checkbox = label.querySelector('input');
+            checkbox.checked = true;
+            this.selectedTopics.add(checkbox.value);
+            label.classList.add('selected');
+        });
+        this.topicWarning.classList.add('hidden');
+    }
+    
+    deselectAllTopics() {
+        const checkboxes = this.topicCheckboxes.querySelectorAll('.topic-checkbox');
+        checkboxes.forEach(label => {
+            const checkbox = label.querySelector('input');
+            checkbox.checked = false;
+            label.classList.remove('selected');
+        });
+        this.selectedTopics.clear();
+    }
+    
+    // ==========================================
+    // STATS / HISTORY
+    // ==========================================
+    
+    getHistory() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('Error reading quiz history:', e);
+            return [];
+        }
+    }
+    
+    saveResult(score, total) {
+        try {
+            const history = this.getHistory();
+            history.push({
+                score: score,
+                total: total,
+                percentage: (score / total) * 100,
+                date: new Date().toISOString(),
+                mode: this.currentMode,
+                topics: Array.from(this.selectedTopics)
+            });
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+        } catch (e) {
+            console.error('Error saving quiz result:', e);
+        }
+    }
+    
+    getStats() {
+        const history = this.getHistory();
+        
+        if (history.length === 0) {
+            return {
+                rollingAverage: null,
+                quizzesTaken: 0,
+                totalCorrect: 0,
+                totalQuestions: 0
+            };
+        }
+        
+        const totalCorrect = history.reduce((sum, h) => sum + h.score, 0);
+        const totalQuestions = history.reduce((sum, h) => sum + h.total, 0);
+        const rollingAverage = (totalCorrect / totalQuestions) * 100;
+        
+        return {
+            rollingAverage: rollingAverage,
+            quizzesTaken: history.length,
+            totalCorrect: totalCorrect,
+            totalQuestions: totalQuestions
+        };
+    }
+    
+    updateStatsDisplay() {
+        const stats = this.getStats();
+        
+        if (this.rollingAverageEl) {
+            this.rollingAverageEl.textContent = stats.rollingAverage !== null 
+                ? `${stats.rollingAverage.toFixed(1)}%` 
+                : '--%';
+        }
+        
+        if (this.quizzesTakenEl) {
+            this.quizzesTakenEl.textContent = stats.quizzesTaken;
+        }
+        
+        if (this.totalCorrectEl) {
+            this.totalCorrectEl.textContent = `${stats.totalCorrect}/${stats.totalQuestions}`;
+        }
+    }
+    
+    clearStats() {
+        if (confirm('Clear all quiz history and course progress? This cannot be undone.')) {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(COURSE_PROGRESS_KEY);
+                this.courseProgress = { completed: [], currentLesson: 1 };
+                this.updateStatsDisplay();
+                this.updateModeScreenPreviews();
+                if (this.currentMode === 'course') {
+                    this.renderCurriculumList();
+                }
+            } catch (e) {
+                console.error('Error clearing stats:', e);
+            }
+        }
     }
 }
 
-// Initialize quiz when DOM is ready
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if questions are loaded
-    if (typeof QUESTIONS !== 'undefined' && QUESTIONS.length > 0) {
-        window.quiz = new Quiz(QUESTIONS, 10);
+    if (typeof QUESTIONS !== 'undefined' && QUESTIONS.length > 0 &&
+        typeof CURRICULUM !== 'undefined' && CURRICULUM.length > 0) {
+        window.course = new DataScienceCourse(QUESTIONS, CURRICULUM);
     } else {
-        console.error('No questions loaded! Make sure questions.js is included.');
+        console.error('Missing questions.js or curriculum.js');
     }
 });

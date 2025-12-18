@@ -777,9 +777,9 @@ const QUESTIONS = [
         explanation: "Count disagreeing pairs between the two clusterings shown.",
         image: "images/evaluation/3.png"
     },
-    // // ==========================================
-    // // SVD (Singular Value Decomposition)
-    // // ==========================================
+    // ==========================================
+    // SVD (Singular Value Decomposition)
+    // ==========================================
     {
         topic: "SVD",
         question: "The rank-k approximation of an (n x m) matrix also has dimension (n x m).",
@@ -1461,7 +1461,7 @@ const QUESTIONS = [
     {
         topic: "Logistic Regression",
         question: "In logistic regression, the gradient used to update model parameters contains the derivative of the sigmoid function.",
-        answer: "Flase",
+        answer: "False",
         alternatives: ["True"],
         explanation: "The gradient of the log-likelihood simplifies and does not contain the derivative of the sigmoid function."
     },

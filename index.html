@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Science Quiz</title>
+    <title>How I Think About | Data Science</title>
     <link rel="stylesheet" href="style.css">
     <!-- MathJax for LaTeX rendering -->
     <script>
@@ -18,40 +18,144 @@
         };
     </script>
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <!-- Ko-fi Widget -->
+    <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
 </head>
 <body>
     <div class="container">
-        <!-- Landing Screen -->
-        <div id="start-screen" class="screen active">
+        <!-- Mode Selection Screen -->
+        <div id="mode-screen" class="screen active">
             <div class="hero">
                 <div class="logo">
-                    <span class="bracket">[</span>
-                    <span class="logo-text">DS</span>
-                    <span class="bracket">]</span>
+                    <span class="logo-text">How I Think About</span>
                 </div>
-                <h1>Data Science Quiz</h1>
-                <p class="subtitle">Test your knowledge across clustering, classification, regression, and more.</p>
+                <h1>Data Science</h1>
+                <p class="subtitle">Learn data science concepts through video lectures and test your understanding with quizzes.</p>
                 
-                <div class="topic-selector">
-                    <div class="topic-selector-header">
-                        <h3>Select Topics</h3>
-                        <div class="topic-actions">
-                            <button id="select-all-btn" class="btn-small">Select All</button>
-                            <button id="deselect-all-btn" class="btn-small">Deselect All</button>
+                <a href="https://www.youtube.com/channel/UCgw4GbbAE-3dlJwcrOU0CcA" target="_blank" class="channel-link">
+                    <span class="yt-logo">▶</span>
+                    <span class="channel-name">Subscribe on YouTube</span>
+                </a>
+                
+                <div class="mode-cards">
+                    <div class="mode-card" id="course-mode-card">
+                        <div class="mode-icon">📚</div>
+                        <h3>Course Mode <span class="beta-badge">BETA</span></h3>
+                        <p>Watch video lectures and take quizzes on each topic. Progress is saved automatically.</p>
+                        <div class="mode-progress" id="course-progress-preview">
+                            <span class="progress-text">0 of 18 topics completed</span>
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill-mini" style="width: 0%"></div>
+                            </div>
                         </div>
+                        <button class="btn-primary">
+                            <span>Start Learning</span>
+                            <span class="arrow">→</span>
+                        </button>
                     </div>
-                    <div id="topic-checkboxes" class="topic-checkboxes">
-                        <!-- Topics will be populated by JavaScript -->
+                    
+                    <div class="mode-card" id="practice-mode-card">
+                        <div class="mode-icon">🎯</div>
+                        <h3>Practice Mode</h3>
+                        <p>Test your knowledge with random questions from topics you choose.</p>
+                        <div class="mode-stats" id="practice-stats-preview">
+                            <span class="stats-text">Rolling average: --%</span>
+                        </div>
+                        <button class="btn-secondary">
+                            <span>Practice Quiz</span>
+                            <span class="arrow">→</span>
+                        </button>
                     </div>
-                    <p id="topic-warning" class="topic-warning hidden">Please select at least one topic</p>
                 </div>
                 
-                <button id="start-btn" class="btn-primary">
-                    <span>Start Quiz</span>
-                    <span class="arrow">→</span>
-                </button>
-                <p class="info">10 random questions • Multiple choice • Instant feedback</p>
+                <div class="kofi-container" id="kofi-home"></div>
             </div>
+        </div>
+
+        <!-- Course Overview Screen -->
+        <div id="course-screen" class="screen">
+            <div class="course-header">
+                <button id="back-to-mode" class="btn-back">← Back</button>
+                <h2>Course Progress <span class="beta-badge">BETA</span></h2>
+            </div>
+            <p class="course-beta-note">🚧 Videos are being added. Topics without videos are locked.</p>
+            
+            <div class="course-progress-bar">
+                <div id="course-progress-fill" class="progress-fill"></div>
+            </div>
+            <p id="course-progress-text" class="progress-label">0 of 18 topics completed</p>
+            
+            <div id="curriculum-list" class="curriculum-list">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Video Lesson Screen -->
+        <div id="lesson-screen" class="screen">
+            <div class="lesson-header">
+                <button id="back-to-course" class="btn-back">← Back to Course</button>
+                <span id="lesson-number" class="lesson-badge">Lesson 1</span>
+            </div>
+            
+            <div class="lesson-content">
+                <h2 id="lesson-title">Lesson Title</h2>
+                <p id="lesson-description" class="lesson-description">Lesson description goes here.</p>
+                
+                <div class="video-container">
+                    <div id="video-placeholder" class="video-placeholder">
+                        <span class="play-icon">▶</span>
+                        <span>Click to load video</span>
+                    </div>
+                    <div id="youtube-player"></div>
+                </div>
+                
+                <div class="lesson-progress">
+                    <div class="progress-step" id="step-video">
+                        <span class="step-icon">○</span>
+                        <span class="step-label">Watch Video</span>
+                    </div>
+                    <div class="progress-connector"></div>
+                    <div class="progress-step" id="step-quiz">
+                        <span class="step-icon">○</span>
+                        <span class="step-label">Pass Quiz (8/10)</span>
+                    </div>
+                </div>
+                
+                <div class="lesson-actions">
+                    <button id="take-quiz-btn" class="btn-primary">
+                        <span>Take Quiz on This Topic</span>
+                        <span class="arrow">→</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Practice Mode Topic Selection Screen -->
+        <div id="practice-screen" class="screen">
+            <div class="practice-header">
+                <button id="back-to-mode-practice" class="btn-back">← Back</button>
+                <h2>Practice Quiz</h2>
+            </div>
+            
+            <div class="topic-selector">
+                <div class="topic-selector-header">
+                    <h3>Select Topics</h3>
+                    <div class="topic-actions">
+                        <button id="select-all-btn" class="btn-small">Select All</button>
+                        <button id="deselect-all-btn" class="btn-small">Deselect All</button>
+                    </div>
+                </div>
+                <div id="topic-checkboxes" class="topic-checkboxes">
+                    <!-- Topics will be populated by JavaScript -->
+                </div>
+                <p id="topic-warning" class="topic-warning hidden">Please select at least one topic</p>
+            </div>
+            
+            <button id="start-btn" class="btn-primary">
+                <span>Start Quiz</span>
+                <span class="arrow">→</span>
+            </button>
+            <p class="info">10 random questions • Multiple choice • Instant feedback</p>
         </div>
 
         <!-- Quiz Screen -->
@@ -92,6 +196,12 @@
                     <p id="score-message" class="score-message"></p>
                 </div>
                 
+                <!-- Topic completion message for course mode -->
+                <div id="topic-complete-msg" class="topic-complete-msg hidden">
+                    <span class="complete-icon">✓</span>
+                    <span>Topic marked as complete!</span>
+                </div>
+                
                 <!-- Rolling Average Stats -->
                 <div id="stats-display" class="stats-display">
                     <div class="stat-item">
@@ -116,16 +226,28 @@
             
             <div class="results-footer">
                 <button id="restart-btn" class="btn-primary">
-                    <span>Try Again</span>
-                    <span class="arrow">↻</span>
+                    <span>Continue</span>
+                    <span class="arrow">→</span>
                 </button>
                 <button id="clear-stats-btn" class="btn-small btn-danger">Clear History</button>
+                
+                <div class="support-prompt">
+                    <p>Enjoying the quizzes?</p>
+                    <div class="kofi-container" id="kofi-results"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="questions.js"></script>
+    <script src="curriculum.js"></script>
     <script src="quiz.js"></script>
+    
+    <!-- Ko-fi Buttons -->
+    <script type='text/javascript'>
+        kofiwidget2.init('Support this site', '#00d4aa', 'howithinkabout');
+        document.getElementById('kofi-home').innerHTML = kofiwidget2.getHTML();
+        document.getElementById('kofi-results').innerHTML = kofiwidget2.getHTML();
+    </script>
 </body>
 </html>
-
