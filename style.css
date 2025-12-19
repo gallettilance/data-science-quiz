@@ -101,7 +101,7 @@ body {
 
 .hero {
     text-align: center;
-    padding: 4rem 0;
+    padding: 1.5rem 0 3rem;
 }
 
 .logo {
@@ -840,6 +840,10 @@ body {
 
 .quiz-header {
     margin-bottom: 2rem;
+}
+
+.quiz-header .btn-back {
+    margin-bottom: 1rem;
 }
 
 .progress-info {

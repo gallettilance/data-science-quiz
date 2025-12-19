@@ -5,6 +5,7 @@
 
 const STORAGE_KEY = 'ds_quiz_history';
 const COURSE_PROGRESS_KEY = 'ds_course_progress';
+const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbwhE7uBPqsR6e_k3mUdUrwVZUge2pBAfzD-SmoyULGa35kbmY5ohu6mBJHtb783FSjd/exec';
 
 class DataScienceCourse {
     constructor(questions, curriculum) {
@@ -211,6 +212,7 @@ class DataScienceCourse {
         this.startBtn = document.getElementById('start-btn');
         
         // Quiz screen
+        this.quitQuizBtn = document.getElementById('quit-quiz-btn');
         this.questionCounter = document.getElementById('question-counter');
         this.topicBadge = document.getElementById('topic-badge');
         this.progressFill = document.getElementById('progress-fill');
@@ -256,6 +258,7 @@ class DataScienceCourse {
         this.startBtn.addEventListener('click', () => this.startPracticeQuiz());
         
         // Quiz
+        this.quitQuizBtn.addEventListener('click', () => this.quitQuiz());
         this.nextBtn.addEventListener('click', () => this.nextQuestion());
         this.restartBtn.addEventListener('click', () => this.handleRestart());
         
@@ -682,8 +685,9 @@ class DataScienceCourse {
     showResults() {
         this.showScreen(this.resultsScreen);
         
-        // Save result
+        // Save result locally and send to analytics
         this.saveResult(this.score, this.actualNumQuestions);
+        this.sendAnalytics();
         
         // Update score
         this.scoreNumber.textContent = this.score;
@@ -801,6 +805,20 @@ class DataScienceCourse {
         }
     }
     
+    quitQuiz() {
+        // Reset quiz state
+        this.progressFill.style.width = '0%';
+        this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
+        this.nextBtn.disabled = true;
+        
+        // Go back to appropriate screen
+        if (this.currentMode === 'course') {
+            this.showScreen(this.lessonScreen);
+        } else {
+            this.showScreen(this.practiceScreen);
+        }
+    }
+    
     handleRestart() {
         this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
         this.progressFill.style.width = '0%';
@@ -915,6 +933,43 @@ class DataScienceCourse {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
         } catch (e) {
             console.error('Error saving quiz result:', e);
+        }
+    }
+    
+    sendAnalytics() {
+        try {
+            // Build detailed answer data
+            const answers = this.userAnswers.map(a => ({
+                id: a.question.id,
+                selected: a.userAnswer,
+                correct: a.question.answer,
+                isCorrect: a.wasCorrect
+            })).filter(a => a.id);
+            
+            const allIds = answers.map(a => a.id);
+            const wrongIds = answers.filter(a => !a.isCorrect).map(a => a.id);
+            
+            const data = {
+                mode: this.currentMode,
+                score: this.score,
+                total: this.actualNumQuestions,
+                topics: Array.from(this.selectedTopics),
+                wrongIds: wrongIds,
+                allIds: allIds,
+                answers: answers  // Detailed per-question data
+            };
+            
+            // Send to Google Sheets (fire and forget)
+            fetch(ANALYTICS_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Required for Apps Script
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            }).catch(err => console.log('Analytics error:', err));
+        } catch (e) {
+            console.error('Error sending analytics:', e);
         }
     }
     
