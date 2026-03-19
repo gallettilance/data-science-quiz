@@ -558,6 +558,22 @@ const QUESTIONS = [
         alternatives: ["6", "8", "10"],
         explanation: "For x to always be alone, even when grouped with 5, the centroid of {5, x} must be farther from 5 than 5 is from 3. This requires (5+x)/2 - 5 > 2, giving x > 9."
     },
+    {
+        id: "kmeans-27",
+        topic: "K-Means",
+        question: "The same initial centroids will always result in the same final clusters for K-means",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "K-means is deterministic once initial centroids are chosen. Given the same centroids, the algorithm will always produce the same clusters."
+    },
+    {
+        id: "kmeans-28",
+        topic: "K-Means",
+        question: "Running K-means on the same data twice, once with original features and once with standardized (zero mean, unit variance) features, will produce the same cluster assignments.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Standardization changes distances between points. A feature with large variance can pull clusters in its direction when unscaled; after scaling, the geometry of the data changes, so cluster boundaries and assignments can differ."
+    },
     // ==========================================
     // HIERARCHICAL CLUSTERING
     // ==========================================
