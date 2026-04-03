@@ -36,7 +36,7 @@ const CURRICULUM = [
         topic: "Hierarchical Clustering",
         title: "Hierarchical Clustering",
         description: "Understand dendrograms, linkage functions, and agglomerative vs divisive approaches.",
-        videoId: "YOUR_VIDEO_ID_HERE",
+        videoId: "JtWttlGnQ3w",
     },
     {
         id: 5,
