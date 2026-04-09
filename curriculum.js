@@ -29,7 +29,7 @@ const CURRICULUM = [
         topic: "K-Means",
         title: "K-Means Clustering",
         description: "Master Lloyd's algorithm, K-means++ initialization, and convergence properties.",
-        videoId: "YOUR_VIDEO_ID_HERE",
+        videoId: "inrvnT64aQk",
     },
     {
         id: 4,
