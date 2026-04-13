@@ -182,8 +182,8 @@ class DataScienceCourse {
         this.resultsScreen = document.getElementById('results-screen');
         
         // Mode selection
-        this.courseModeCard = document.getElementById('course-mode-card');
-        this.practiceModeCard = document.getElementById('practice-mode-card');
+        this.courseStartBtn = document.getElementById('course-start-btn');
+        this.practiceStartBtn = document.getElementById('practice-start-btn');
         this.courseProgressPreview = document.getElementById('course-progress-preview');
         this.practiceStatsPreview = document.getElementById('practice-stats-preview');
         
@@ -248,9 +248,13 @@ class DataScienceCourse {
     // ==========================================
     
     bindEvents() {
-        // Mode selection
-        this.courseModeCard.addEventListener('click', () => this.selectCourseMode());
-        this.practiceModeCard.addEventListener('click', () => this.selectPracticeMode());
+        // Mode selection (explicit buttons only—no full-card click targets)
+        if (this.courseStartBtn) {
+            this.courseStartBtn.addEventListener('click', () => this.selectCourseMode());
+        }
+        if (this.practiceStartBtn) {
+            this.practiceStartBtn.addEventListener('click', () => this.selectPracticeMode());
+        }
         
         // Course navigation
         this.backToModeBtn.addEventListener('click', () => this.showScreen(this.modeScreen));

@@ -30,43 +30,82 @@
                     <span class="logo-text">How I Think About</span>
                 </div>
                 <h1>Data Science</h1>
-                <p class="subtitle">Learn data science concepts through video lectures and test your understanding with quizzes.</p>
+                <p class="subtitle">See how you stack up against everyone practicing here</p>
                 
-                <a href="https://www.youtube.com/channel/UCgw4GbbAE-3dlJwcrOU0CcA" target="_blank" class="channel-link">
-                    <span class="yt-logo">▶</span>
-                    <span class="channel-name">Subscribe on YouTube</span>
-                </a>
+                <section class="home-practice-panel home-practice-panel--practice" aria-labelledby="home-practice-heading">
+                    <header class="home-practice-header">
+                        <div class="home-practice-title-row">
+                            <span class="home-practice-emoji" aria-hidden="true">🎯</span>
+                            <h2 id="home-practice-heading" class="home-practice-heading">Take a quiz</h2>
+                        </div>
+                        <p class="home-practice-lead">10 questions on topics you choose</p>
+                    </header>
+                   
+                    <ul class="home-practice-benefits">
+                        <li>
+                            <strong class="home-benefit-label">Your Rank</strong>
+                            <span class="home-benefit-copy">Percentile vs all quiz scores on this site.</span>
+                        </li>
+                        <li>
+                            <strong class="home-benefit-label">Your Strength & Weakness</strong>
+                            <span class="home-benefit-copy">Strongest &amp; weakest topics from your own history here.</span>
+                        </li>
+                        <li>
+                            <strong class="home-benefit-label">Detailed Explanations</strong>
+                            <span class="home-benefit-copy">Every item explained and labeled easy / medium / hard</span>
+                        </li>
+                    </ul>
+                    <div class="home-practice-stats-wrap">
+                        <div class="mode-stats home-practice-stats" id="practice-stats-preview">
+                            <span class="stats-text">Rolling average: --%</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-primary home-practice-cta" id="practice-start-btn">
+                        <span>See How You Stack Up</span>
+                        <span class="arrow">→</span>
+                    </button>
+                </section>
                 
-                <div class="mode-cards">
-                    <div class="mode-card" id="course-mode-card">
-                        <div class="mode-icon">📚</div>
-                        <h3>Course Mode <span class="beta-badge">BETA</span></h3>
-                        <p>Watch video lectures and take quizzes on each topic. Progress is saved automatically.</p>
-                        <div class="mode-progress" id="course-progress-preview">
+                <section class="home-practice-panel home-practice-panel--course" aria-labelledby="home-course-heading">
+                    <header class="home-practice-header">
+                        <div class="home-practice-title-row">
+                            <span class="home-practice-emoji" aria-hidden="true">📚</span>
+                            <h2 id="home-course-heading" class="home-practice-heading">Video Course <span class="beta-badge">BETA</span></h2>
+                        </div>
+                        <p class="home-practice-lead">Watch a video, take its quiz, see your progress</p>
+                    </header>
+                    <ul class="home-practice-benefits">
+                        <li>
+                            <strong class="home-benefit-label">Lectures</strong>
+                            <span class="home-benefit-copy">Short videos, one topic at a time.</span>
+                        </li>
+                        <li>
+                            <strong class="home-benefit-label">Quizzes</strong>
+                            <span class="home-benefit-copy">Pass 8/10 to advance—then see how you stack up + your topic stats.</span>
+                        </li>
+                        <li>
+                            <strong class="home-benefit-label">Progress</strong>
+                            <span class="home-benefit-copy">Saved in this browser.</span>
+                        </li>
+                    </ul>
+                    <div class="home-practice-stats-wrap">
+                        <div class="mode-progress home-practice-stats home-practice-stats--progress" id="course-progress-preview">
                             <span class="progress-text">0 of 18 topics completed</span>
                             <div class="progress-bar-mini">
                                 <div class="progress-fill-mini" style="width: 0%"></div>
                             </div>
                         </div>
-                        <button class="btn-primary">
-                            <span>Start Learning</span>
-                            <span class="arrow">→</span>
-                        </button>
                     </div>
-                    
-                    <div class="mode-card" id="practice-mode-card">
-                        <div class="mode-icon">🎯</div>
-                        <h3>Practice Mode</h3>
-                        <p>Test your knowledge with random questions from topics you choose.</p>
-                        <div class="mode-stats" id="practice-stats-preview">
-                            <span class="stats-text">Rolling average: --%</span>
-                        </div>
-                        <button class="btn-secondary">
-                            <span>Practice Quiz</span>
-                            <span class="arrow">→</span>
-                        </button>
-                    </div>
-                </div>
+                    <button type="button" class="btn-secondary home-practice-cta" id="course-start-btn">
+                        <span>Start</span>
+                        <span class="arrow">→</span>
+                    </button>
+                </section>
+                
+                <a href="https://www.youtube.com/channel/UCgw4GbbAE-3dlJwcrOU0CcA" target="_blank" class="channel-link">
+                    <span class="yt-logo">▶</span>
+                    <span class="channel-name">Subscribe on YouTube</span>
+                </a>
                 
                 <div class="kofi-container" id="kofi-home"></div>
             </div>
@@ -155,7 +194,7 @@
                 <span>Start Quiz</span>
                 <span class="arrow">→</span>
             </button>
-            <p class="info">10 random questions • Multiple choice • Instant feedback</p>
+            <p class="info">10 questions • Multiple choice • Personalized stats &amp; how you rank at the end</p>
         </div>
 
         <!-- Quiz Screen -->
