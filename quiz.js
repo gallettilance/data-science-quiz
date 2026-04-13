@@ -5,7 +5,13 @@
 
 const STORAGE_KEY = 'ds_quiz_history';
 const COURSE_PROGRESS_KEY = 'ds_course_progress';
-const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbwhE7uBPqsR6e_k3mUdUrwVZUge2pBAfzD-SmoyULGa35kbmY5ohu6mBJHtb783FSjd/exec';
+const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbxw0eN6l4zXXpLKxCHEYhpCijcER13t11feBwZjhvZp1a2smEDutUnn996PNWz-rsOz/exec';
+
+/** Min site responses per question before we show Easy/Medium/Hard (30+ is ideal; lower = noisier). */
+const MIN_QUESTION_N_FOR_DIFFICULTY = 8;
+const MIN_QUESTION_N_FOR_HIGH_CONFIDENCE = 30;
+/** Min graded answers on a topic before we rank it for best/worst (below this we fall back to any data). */
+const MIN_TOPIC_ANSWERS_FOR_RANK = 3;
 
 class DataScienceCourse {
     constructor(questions, curriculum) {
@@ -20,7 +26,7 @@ class DataScienceCourse {
         this.score = 0;
         this.selectedQuestions = [];
         this.userAnswers = [];
-        this.answered = false;
+        this.pendingSelection = null; // { choice } until user presses Next
         this.selectedTopics = new Set();
         
         this.init();
@@ -232,6 +238,9 @@ class DataScienceCourse {
         this.reviewList = document.getElementById('review-list');
         this.restartBtn = document.getElementById('restart-btn');
         this.clearStatsBtn = document.getElementById('clear-stats-btn');
+        this.communityInsights = document.getElementById('community-insights');
+        this.percentileBlock = document.getElementById('percentile-block');
+        this.topicFocusBlock = document.getElementById('topic-focus-block');
     }
     
     // ==========================================
@@ -548,9 +557,6 @@ class DataScienceCourse {
             this.scoreTotal.textContent = `/${this.actualNumQuestions}`;
         }
         
-        // Reset next button
-        this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
-        
         this.showScreen(this.quizScreen);
         this.displayQuestion();
     }
@@ -577,8 +583,9 @@ class DataScienceCourse {
     }
     
     displayQuestion() {
-        this.answered = false;
+        this.pendingSelection = null;
         this.nextBtn.disabled = true;
+        this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
         
         const question = this.selectedQuestions[this.currentQuestionIndex];
         
@@ -616,7 +623,7 @@ class DataScienceCourse {
                 <span class="choice-letter">${letters[index]}</span>
                 <span class="choice-text">${choice.text}</span>
             `;
-            btn.addEventListener('click', () => this.selectAnswer(btn, choice, question));
+            btn.addEventListener('click', () => this.selectAnswer(btn, choice));
             this.choicesContainer.appendChild(btn);
         });
         
@@ -628,51 +635,35 @@ class DataScienceCourse {
         }
     }
     
-    selectAnswer(button, choice, question) {
-        if (this.answered) return;
-        this.answered = true;
-        
-        // Disable all choices
-        const allChoices = this.choicesContainer.querySelectorAll('.choice');
-        allChoices.forEach(c => c.classList.add('disabled'));
-        
-        // Mark selected answer
-        button.classList.add('selected');
-        
-        // Show correct/incorrect
-        if (choice.isCorrect) {
-            button.classList.remove('selected');
-            button.classList.add('correct');
-            this.score++;
-        } else {
-            button.classList.remove('selected');
-            button.classList.add('incorrect');
-            
-            // Highlight the correct answer
-            allChoices.forEach((c, idx) => {
-                if (question.shuffledChoices[idx].isCorrect) {
-                    c.classList.add('correct');
-                }
-            });
-        }
-        
-        // Store user's answer
-        this.userAnswers.push({
-            question: question,
-            userAnswer: choice.text,
-            wasCorrect: choice.isCorrect
+    selectAnswer(button, choice) {
+        const allChoiceBtns = this.choicesContainer.querySelectorAll('.choice');
+        allChoiceBtns.forEach(c => {
+            c.classList.remove('selected', 'correct', 'incorrect');
         });
-        
-        // Enable next button
+        button.classList.add('selected');
+        this.pendingSelection = { choice };
         this.nextBtn.disabled = false;
         
-        // Update button text if last question
         if (this.currentQuestionIndex === this.actualNumQuestions - 1) {
             this.nextBtn.querySelector('span:first-child').textContent = 'See Results';
         }
     }
     
     nextQuestion() {
+        if (!this.pendingSelection) return;
+        
+        const question = this.selectedQuestions[this.currentQuestionIndex];
+        const { choice } = this.pendingSelection;
+        this.userAnswers.push({
+            question,
+            userAnswer: choice.text,
+            wasCorrect: choice.isCorrect
+        });
+        if (choice.isCorrect) {
+            this.score++;
+        }
+        this.pendingSelection = null;
+        
         this.currentQuestionIndex++;
         
         if (this.currentQuestionIndex < this.actualNumQuestions) {
@@ -734,15 +725,31 @@ class DataScienceCourse {
         // Progress bar to 100%
         this.progressFill.style.width = '100%';
         
-        // Build review list
-        this.buildReviewList();
+        this.reviewList.innerHTML = '<p class="review-loading">Loading review…</p>';
+        this.showCommunityInsightsLoading();
+        
+        this.loadCommunityStats()
+            .then((community) => {
+                this.buildReviewList(community);
+                this.renderCommunityInsights(community, this.score, this.actualNumQuestions);
+                if (window.MathJax) {
+                    MathJax.typesetPromise([this.reviewList, this.communityInsights]).catch((err) => {
+                        console.log('MathJax rendering:', err);
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error('Community stats failed:', err);
+                this.buildReviewList(null);
+                this.renderCommunityInsights(null, this.score, this.actualNumQuestions);
+            });
         
         // Update continue button text based on mode
         const continueText = this.currentMode === 'course' ? 'Continue Course' : 'Continue';
         this.restartBtn.querySelector('span:first-child').textContent = continueText;
     }
     
-    buildReviewList() {
+    buildReviewList(communityStats) {
         this.reviewList.innerHTML = '';
         
         this.userAnswers.forEach((answer, index) => {
@@ -756,10 +763,14 @@ class DataScienceCourse {
                 ? answer.question.question.substring(0, 80) + '...'
                 : answer.question.question;
             
+            const difficulty = this.classifyQuestionDifficulty(answer.question, communityStats);
+            const difficultyHtml = this.formatDifficultyBadge(difficulty);
+            
             item.innerHTML = `
                 <div class="review-header">
                     <span class="review-status ${statusClass}">${statusIcon}</span>
                     <span class="review-question">${index + 1}. ${questionPreview}</span>
+                    ${difficultyHtml}
                     <span class="review-toggle">▼</span>
                 </div>
                 <div class="review-body">
@@ -797,16 +808,11 @@ class DataScienceCourse {
             
             this.reviewList.appendChild(item);
         });
-        
-        if (window.MathJax) {
-            MathJax.typesetPromise([this.reviewList]).catch(err => {
-                console.log('MathJax rendering:', err);
-            });
-        }
     }
     
     quitQuiz() {
         // Reset quiz state
+        this.pendingSelection = null;
         this.progressFill.style.width = '0%';
         this.nextBtn.querySelector('span:first-child').textContent = 'Next Question';
         this.nextBtn.disabled = true;
@@ -919,6 +925,21 @@ class DataScienceCourse {
         }
     }
     
+    buildTopicBreakdownFromAnswers() {
+        const breakdown = {};
+        for (const a of this.userAnswers) {
+            const t = a.question.topic;
+            if (!breakdown[t]) {
+                breakdown[t] = { correct: 0, total: 0 };
+            }
+            breakdown[t].total++;
+            if (a.wasCorrect) {
+                breakdown[t].correct++;
+            }
+        }
+        return breakdown;
+    }
+    
     saveResult(score, total) {
         try {
             const history = this.getHistory();
@@ -928,7 +949,8 @@ class DataScienceCourse {
                 percentage: (score / total) * 100,
                 date: new Date().toISOString(),
                 mode: this.currentMode,
-                topics: Array.from(this.selectedTopics)
+                topics: Array.from(this.selectedTopics),
+                topicBreakdown: this.buildTopicBreakdownFromAnswers()
             });
             localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
         } catch (e) {
@@ -971,6 +993,423 @@ class DataScienceCourse {
         } catch (e) {
             console.error('Error sending analytics:', e);
         }
+    }
+    
+    getCommunityStatsUrl() {
+        const base = ANALYTICS_URL.trim();
+        const sep = base.includes('?') ? '&' : '?';
+        return `${base}${sep}action=stats`;
+    }
+    
+    /**
+     * Merge sheet JSON with topic rollups derived from question ids + local QUESTIONS (topic labels).
+     */
+    normalizeCommunityStats(raw) {
+        if (!raw || typeof raw !== 'object') {
+            return null;
+        }
+        if (raw.ok === false) {
+            return null;
+        }
+        const out = { ...raw };
+        if (out.questionStats && typeof out.questionStats === 'object') {
+            const norm = {};
+            for (const [k, v] of Object.entries(out.questionStats)) {
+                norm[String(k).trim()] = v;
+            }
+            out.questionStats = norm;
+        }
+        const hasTopics = out.topicStats && Object.keys(out.topicStats).length > 0;
+        if (!hasTopics && out.questionStats && this.allQuestions && this.allQuestions.length) {
+            out.topicStats = this.aggregateTopicStatsFromQuestionStats(out.questionStats);
+        }
+        return out;
+    }
+    
+    aggregateTopicStatsFromQuestionStats(questionStats) {
+        const acc = {};
+        for (const q of this.allQuestions) {
+            const qs = questionStats[q.id];
+            if (!qs || typeof qs.n !== 'number' || qs.n < 1) {
+                continue;
+            }
+            const t = q.topic;
+            if (!acc[t]) {
+                acc[t] = { n: 0, correct: 0 };
+            }
+            acc[t].n += qs.n;
+            let c = qs.correct;
+            if (typeof c !== 'number' && typeof qs.rate === 'number') {
+                c = Math.round(qs.rate * qs.n);
+            }
+            if (typeof c !== 'number') {
+                c = 0;
+            }
+            acc[t].correct += c;
+        }
+        const topicStats = {};
+        for (const [t, v] of Object.entries(acc)) {
+            topicStats[t] = {
+                n: v.n,
+                correct: v.correct,
+                rate: v.n > 0 ? v.correct / v.n : 0
+            };
+        }
+        return topicStats;
+    }
+    
+    loadCommunityStatsJsonp() {
+        return new Promise((resolve) => {
+            const cbName = `quizStatsJsonp_${Date.now()}`;
+            const script = document.createElement('script');
+            let tid;
+            const cleanup = () => {
+                if (tid) {
+                    clearTimeout(tid);
+                }
+                if (script.parentNode) {
+                    script.parentNode.removeChild(script);
+                }
+                try {
+                    delete window[cbName];
+                } catch (x) {
+                    /* ignore */
+                }
+            };
+            window[cbName] = (data) => {
+                cleanup();
+                resolve(this.normalizeCommunityStats(data));
+            };
+            tid = setTimeout(() => {
+                cleanup();
+                resolve(null);
+            }, 15000);
+            const base = ANALYTICS_URL.trim();
+            const sep = base.includes('?') ? '&' : '?';
+            script.src = `${base}${sep}action=stats&callback=${encodeURIComponent(cbName)}`;
+            script.onerror = () => {
+                cleanup();
+                resolve(null);
+            };
+            document.body.appendChild(script);
+        });
+    }
+    
+    async loadCommunityStats() {
+        const primaryUrl = this.getCommunityStatsUrl();
+        try {
+            const res = await fetch(primaryUrl, {
+                method: 'GET',
+                cache: 'no-store',
+                credentials: 'omit'
+            });
+            if (res.ok) {
+                const raw = await res.json();
+                const normalized = this.normalizeCommunityStats(raw);
+                if (normalized) {
+                    return normalized;
+                }
+                if (raw && raw.error) {
+                    console.warn('Community stats API:', raw.error);
+                }
+            }
+        } catch (e) {
+            console.warn('Sheet stats fetch failed:', e);
+        }
+        const fromJsonp = await this.loadCommunityStatsJsonp();
+        if (fromJsonp) {
+            return fromJsonp;
+        }
+        return null;
+    }
+    
+    getHistogramForQuizTotal(stats, total) {
+        if (!stats) {
+            return null;
+        }
+        const key = String(total);
+        const byTotal = stats.scoreHistogramByTotal;
+        if (byTotal && Array.isArray(byTotal[key]) && byTotal[key].length === total + 1) {
+            return byTotal[key];
+        }
+        return null;
+    }
+    
+    /**
+     * Share of takers who scored strictly below this raw score (common "higher than X%" wording).
+     */
+    computePercentileHigherThan(score, histogram) {
+        const total = histogram.reduce((a, b) => a + b, 0);
+        if (total <= 0) {
+            return null;
+        }
+        let below = 0;
+        for (let s = 0; s < score; s++) {
+            below += histogram[s] || 0;
+        }
+        return Math.round((100 * below) / total);
+    }
+    
+    countAnswerChoices(question) {
+        const n = question.alternatives ? question.alternatives.length : 0;
+        return Math.max(2, 1 + n);
+    }
+    
+    /**
+     * Chance-corrected facility for MCQ: 0 = random guessing, 1 = everyone correct.
+     * Standard item-analysis adjustment for guessing (compares observed p to 1/m).
+     */
+    chanceAdjustedFacility(p, m) {
+        const c = 1 / m;
+        const denom = 1 - c;
+        if (denom < 1e-9) {
+            return p;
+        }
+        return Math.max(0, Math.min(1, (p - c) / denom));
+    }
+    
+    /**
+     * Labels use chance-adjusted facility with bands similar to classical facility rules
+     * (easy / medium / hard) after accounting for the number of distractors.
+     */
+    getQuestionStatEntry(stats, questionId) {
+        if (!stats || !stats.questionStats || questionId == null) {
+            return null;
+        }
+        const id = String(questionId).trim();
+        return stats.questionStats[id] || null;
+    }
+    
+    classifyQuestionDifficulty(question, stats) {
+        const m = this.countAnswerChoices(question);
+        const id = question.id;
+        if (!id) {
+            return { label: null, title: 'Site-wide stats for this question are not available yet.' };
+        }
+        const qs = this.getQuestionStatEntry(stats, id);
+        const n = qs != null ? Number(qs.n) : 0;
+        if (!qs || !Number.isFinite(n) || n < MIN_QUESTION_N_FOR_DIFFICULTY) {
+            return {
+                label: null,
+                title: n > 0
+                    ? `Only ${n} site responses so far (need at least ${MIN_QUESTION_N_FOR_DIFFICULTY} for Easy/Medium/Hard).`
+                    : 'No matching row in Stats for this question id, or stats did not load.'
+            };
+        }
+        let p = qs.rate != null ? Number(qs.rate) : null;
+        if ((p == null || Number.isNaN(p)) && qs.correct != null) {
+            p = Number(qs.correct) / n;
+        }
+        if (p == null || Number.isNaN(p)) {
+            return { label: null, title: 'Incomplete stats for this question.' };
+        }
+        const adj = this.chanceAdjustedFacility(p, m);
+        let label;
+        if (adj >= 0.55) {
+            label = 'Easy';
+        } else if (adj >= 0.28) {
+            label = 'Medium';
+        } else {
+            label = 'Hard';
+        }
+        const pct = Math.round(p * 100);
+        const confidence =
+            n >= MIN_QUESTION_N_FOR_HIGH_CONFIDENCE
+                ? ''
+                : ` (preliminary: ${n} responses; ~${MIN_QUESTION_N_FOR_HIGH_CONFIDENCE}+ is more stable)`;
+        return {
+            label,
+            title: `${pct}% correct across ${n} responses (${m} choices). Chance-adjusted facility.${confidence}`
+        };
+    }
+    
+    escapeAttr(text) {
+        if (text == null) {
+            return '';
+        }
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;');
+    }
+    
+    formatDifficultyBadge(difficulty) {
+        const t = this.escapeAttr(difficulty.title);
+        if (!difficulty.label) {
+            return `<span class="review-difficulty review-difficulty--pending" title="${t}">Unrated</span>`;
+        }
+        const slug = difficulty.label.toLowerCase();
+        return `<span class="review-difficulty review-difficulty--${slug}" title="${t}">${difficulty.label}</span>`;
+    }
+    
+    aggregateUserTopicRates(history) {
+        const agg = {};
+        for (const entry of history) {
+            if (!entry.topicBreakdown) {
+                continue;
+            }
+            for (const [topic, row] of Object.entries(entry.topicBreakdown)) {
+                if (!agg[topic]) {
+                    agg[topic] = { correct: 0, total: 0 };
+                }
+                agg[topic].correct += row.correct;
+                agg[topic].total += row.total;
+            }
+        }
+        return agg;
+    }
+    
+    /**
+     * Best / weakest topic from aggregateUserTopicRates (saved quiz history in localStorage).
+     */
+    computeUserBestWorstTopics(userAgg) {
+        const entries = Object.entries(userAgg)
+            .map(([topic, { correct, total }]) => ({
+                topic,
+                correct,
+                total,
+                rate: total > 0 ? correct / total : 0
+            }))
+            .filter((e) => e.total > 0);
+        
+        if (entries.length === 0) {
+            return { best: null, worst: null };
+        }
+        
+        let pool = entries.filter((e) => e.total >= MIN_TOPIC_ANSWERS_FOR_RANK);
+        if (pool.length === 0) {
+            pool = entries;
+        }
+        
+        pool.sort((a, b) => {
+            if (b.rate !== a.rate) {
+                return b.rate - a.rate;
+            }
+            return b.total - a.total;
+        });
+        
+        const best = pool[0];
+        const worst = pool[pool.length - 1];
+        
+        if (pool.length === 1 || best.topic === worst.topic) {
+            return { best, worst: null, singleTopic: true };
+        }
+        return { best, worst };
+    }
+    
+    showCommunityInsightsLoading() {
+        if (!this.communityInsights || !this.percentileBlock || !this.topicFocusBlock) {
+            return;
+        }
+        this.communityInsights.classList.remove('hidden');
+        this.communityInsights.classList.add('community-insights--loading');
+        this.communityInsights.setAttribute('aria-busy', 'true');
+        
+        const skeleton = (variant) => `
+            <div class="insights-loading insights-loading--${variant}" role="status">
+                <div class="insights-loading-row">
+                    <span class="insights-spinner" aria-hidden="true"></span>
+                    <span class="insights-loading-text">Pulling live stats from the sheet…</span>
+                </div>
+                <div class="insights-skeleton-stack">
+                    <div class="insights-skeleton insights-skeleton--hero"></div>
+                    <div class="insights-skeleton insights-skeleton--line"></div>
+                    <div class="insights-skeleton insights-skeleton--line insights-skeleton--short"></div>
+                    <div class="insights-skeleton-row">
+                        <div class="insights-skeleton insights-skeleton--chip"></div>
+                        <div class="insights-skeleton insights-skeleton--chip"></div>
+                        <div class="insights-skeleton insights-skeleton--chip"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.percentileBlock.innerHTML = skeleton('percentile');
+        this.topicFocusBlock.innerHTML = skeleton('topics');
+    }
+    
+    renderPercentileBlock(stats, score, total) {
+        if (!this.percentileBlock) {
+            return;
+        }
+        const histogram = this.getHistogramForQuizTotal(stats, total);
+        if (!histogram) {
+            this.percentileBlock.innerHTML = `
+                <p class="insight-placeholder">No histogram for this quiz length yet (need more completed quizzes), or stats could not be loaded.</p>
+            `;
+            return;
+        }
+        const sum = histogram.reduce((a, b) => a + b, 0);
+        if (sum <= 0) {
+            this.percentileBlock.innerHTML = `
+                <p class="insight-placeholder">Once enough people have taken quizzes, your score will be compared to everyone else here.</p>
+            `;
+            return;
+        }
+        const pct = this.computePercentileHigherThan(score, histogram);
+        this.percentileBlock.innerHTML = `
+            <div class="percentile-card">
+                <div class="percentile-value">${pct}<span class="percentile-suffix">%</span></div>
+                <p class="percentile-copy">You scored higher than <strong>${pct}%</strong> of <strong>${sum.toLocaleString()}</strong> recorded quiz results on this site (same length: ${total} questions).</p>
+            </div>
+        `;
+    }
+    
+    renderTopicFocusBlock() {
+        if (!this.topicFocusBlock) {
+            return;
+        }
+        const history = this.getHistory();
+        const userAgg = this.aggregateUserTopicRates(history);
+        const { best, worst, singleTopic } = this.computeUserBestWorstTopics(userAgg);
+        
+        const rateLine = (e) =>
+            `<span class="topic-rate-note">${Math.round(e.rate * 100)}% correct · ${e.total} question${e.total === 1 ? '' : 's'} total</span>`;
+        
+        let html = '';
+        if (!best) {
+            html = `<p class="insight-placeholder">No per-topic history yet. Finish quizzes on this device—your topic breakdown is saved automatically in browser storage.</p>`;
+        } else if (singleTopic) {
+            html = `
+                <div class="topic-focus-group topic-focus-group--strong">
+                    <div class="topic-focus-heading">Your topic so far</div>
+                    <div class="topic-best-worst-row">
+                        <span class="topic-chip topic-chip--strong">${this.escapeAttr(best.topic)}</span>
+                        ${rateLine(best)}
+                    </div>
+                    <p class="topic-focus-footnote">Practice more topics to see separate “strongest” and “needs work” picks.</p>
+                </div>
+            `;
+        } else {
+            html = `
+                <div class="topic-focus-group topic-focus-group--strong">
+                    <div class="topic-focus-heading">Strongest topic</div>
+                    <div class="topic-best-worst-row">
+                        <span class="topic-chip topic-chip--strong">${this.escapeAttr(best.topic)}</span>
+                        ${rateLine(best)}
+                    </div>
+                </div>
+                <div class="topic-focus-group topic-focus-group--grow">
+                    <div class="topic-focus-heading">Needs the most work</div>
+                    <div class="topic-best-worst-row">
+                        <span class="topic-chip topic-chip--grow">${this.escapeAttr(worst.topic)}</span>
+                        ${rateLine(worst)}
+                    </div>
+                </div>
+            `;
+        }
+        this.topicFocusBlock.innerHTML = html;
+    }
+    
+    renderCommunityInsights(stats, score, total) {
+        if (!this.communityInsights || !this.percentileBlock || !this.topicFocusBlock) {
+            return;
+        }
+        this.communityInsights.classList.remove('community-insights--loading');
+        this.communityInsights.setAttribute('aria-busy', 'false');
+        this.renderPercentileBlock(stats, score, total);
+        this.renderTopicFocusBlock();
+        this.communityInsights.classList.remove('hidden');
     }
     
     getStats() {
