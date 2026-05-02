@@ -1231,8 +1231,8 @@ const QUESTIONS = [
         id: "naivebayes-4",
         topic: "Naive Bayes",
         question: "Using Naive Bayes and the same dataset, classify (No, Divorced, Mid).",
-        answer: "No",
-        alternatives: ["Yes", "Impossible as we need to know the default class"],
+        answer: "Yes",
+        alternatives: ["No", "Impossible as we need to know the default class"],
         explanation: "Calculate P(Yes|features) and P(No|features) using Naive Bayes formula. P(No|features) is higher.",
         image: "images/naivebayes/1.png"
     },

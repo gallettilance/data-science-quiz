@@ -39,6 +39,7 @@ class DataScienceCourse {
         this.initTopicSelector();
         this.updateModeScreenPreviews();
         this.loadYouTubeAPI();
+        this.refreshLandingDashboard();
     }
     
     // ==========================================
@@ -1137,6 +1138,311 @@ class DataScienceCourse {
             return byTotal[key];
         }
         return null;
+    }
+    
+    /**
+     * Pick a histogram for landing performance (prefer 10-question, else the length with most attempts).
+     */
+    pickPerformanceHistogram(stats) {
+        if (!stats || !stats.scoreHistogramByTotal || typeof stats.scoreHistogramByTotal !== 'object') {
+            return null;
+        }
+        let h = this.getHistogramForQuizTotal(stats, 10);
+        let total = h ? h.reduce((a, b) => a + b, 0) : 0;
+        if (total > 0) {
+            return { histogram: h, quizLength: 10 };
+        }
+        let bestKey = null;
+        let bestSum = 0;
+        let bestHist = null;
+        for (const k of Object.keys(stats.scoreHistogramByTotal)) {
+            const arr = stats.scoreHistogramByTotal[k];
+            const T = parseInt(k, 10);
+            if (!Number.isFinite(T) || T < 1 || !Array.isArray(arr) || arr.length !== T + 1) {
+                continue;
+            }
+            const s = arr.reduce((a, b) => a + b, 0);
+            if (s > bestSum) {
+                bestSum = s;
+                bestKey = T;
+                bestHist = arr;
+            }
+        }
+        if (bestHist && bestSum > 0) {
+            return { histogram: bestHist, quizLength: bestKey };
+        }
+        return null;
+    }
+    
+    summarizeLandingPerformance(stats) {
+        const picked = this.pickPerformanceHistogram(stats);
+        if (!picked) {
+            return null;
+        }
+        const { histogram: h, quizLength: T } = picked;
+        const total = h.reduce((a, b) => a + b, 0);
+        if (total <= 0) {
+            return null;
+        }
+        let scoreSum = 0;
+        for (let i = 0; i < h.length; i++) {
+            scoreSum += i * (h[i] || 0);
+        }
+        const avg = scoreSum / total;
+        const passAt = Math.max(0, Math.ceil(0.8 * T));
+        let passCount = 0;
+        for (let i = passAt; i <= T; i++) {
+            passCount += h[i] || 0;
+        }
+        return {
+            totalAttempts: total,
+            avgScore: avg,
+            maxScore: T,
+            passRate: (100 * passCount) / total,
+            quizLength: T
+        };
+    }
+    
+    pollQuestionDifficultyCounts(stats) {
+        let easy = 0;
+        let medium = 0;
+        let hard = 0;
+        let unrated = 0;
+        for (const q of this.allQuestions) {
+            const d = this.classifyQuestionDifficulty(q, stats);
+            if (!d.label) {
+                unrated++;
+            } else if (d.label === 'Easy') {
+                easy++;
+            } else if (d.label === 'Medium') {
+                medium++;
+            } else {
+                hard++;
+            }
+        }
+        return { easy, medium, hard, unrated };
+    }
+    
+    getChallengingTopicRows(stats, limit = 5) {
+        if (!stats || !this.allQuestions.length) {
+            return [];
+        }
+        const topicStats =
+            stats.topicStats && Object.keys(stats.topicStats).length
+                ? stats.topicStats
+                : this.aggregateTopicStatsFromQuestionStats(stats.questionStats || {});
+        const rows = Object.entries(topicStats)
+            .map(([name, t]) => ({ name, rate: t.rate, n: t.n }))
+            .filter((r) => r.n >= MIN_TOPIC_ANSWERS_FOR_RANK)
+            .sort((a, b) => a.rate - b.rate);
+        if (rows.length) {
+            return rows.slice(0, limit);
+        }
+        const relaxed = Object.entries(topicStats)
+            .map(([name, t]) => ({ name, rate: t.rate, n: t.n }))
+            .filter((r) => r.n >= 1)
+            .sort((a, b) => a.rate - b.rate);
+        return relaxed.slice(0, limit);
+    }
+    
+    renderLandingDashboard(stats) {
+        const dash = document.getElementById('home-community-dashboard');
+        if (!dash) {
+            return;
+        }
+        const elAttempts = document.getElementById('dash-total-attempts');
+        const elAvg = document.getElementById('dash-avg-score');
+        const elPass = document.getElementById('dash-pass-rate');
+        const hintAttempts = document.getElementById('dash-attempts-hint');
+        const hintScore = document.getElementById('dash-score-hint');
+        const hintPass = document.getElementById('dash-pass-hint');
+        const barsWrap = document.getElementById('dash-difficulty-wrap');
+        const barsEl = document.getElementById('dash-difficulty-bars');
+        const legendEl = document.getElementById('dash-difficulty-legend');
+        const topicsEl = document.getElementById('dash-challenging-topics');
+        const footnoteEl = document.getElementById('dash-footnote');
+        if (!elAttempts || !elAvg || !elPass || !barsEl || !legendEl || !topicsEl) {
+            return;
+        }
+        dash.classList.remove('home-community-dashboard--loading');
+        if (!stats) {
+            elAttempts.textContent = '—';
+            elAvg.textContent = '—';
+            elPass.textContent = '—';
+            if (hintAttempts) {
+                hintAttempts.textContent = 'Stats unavailable (network or sheet)';
+            }
+            if (hintScore) {
+                hintScore.textContent = '';
+            }
+            if (hintPass) {
+                hintPass.textContent = '';
+            }
+            barsEl.innerHTML = '';
+            if (barsWrap) {
+                barsWrap.setAttribute('aria-hidden', 'true');
+            }
+            legendEl.innerHTML = '';
+            topicsEl.innerHTML = '';
+            const li = document.createElement('li');
+            li.className = 'home-dash-topics-empty';
+            li.textContent = 'Could not load community stats.';
+            topicsEl.appendChild(li);
+            if (footnoteEl) {
+                footnoteEl.textContent =
+                    'Scores and difficulty use anonymous analytics. Refresh the page to try again.';
+            }
+            return;
+        }
+        const perf = this.summarizeLandingPerformance(stats);
+        const totalAllQuizzes = (() => {
+            const byTotal = stats.scoreHistogramByTotal;
+            if (!byTotal || typeof byTotal !== 'object') {
+                return null;
+            }
+            let sum = 0;
+            for (const k of Object.keys(byTotal)) {
+                const arr = byTotal[k];
+                if (Array.isArray(arr)) {
+                    sum += arr.reduce((a, b) => a + b, 0);
+                }
+            }
+            return sum;
+        })();
+        if (perf) {
+            const displayTotal = totalAllQuizzes != null && totalAllQuizzes > perf.totalAttempts
+                ? totalAllQuizzes
+                : perf.totalAttempts;
+            elAttempts.textContent = displayTotal.toLocaleString();
+            if (hintAttempts) {
+                hintAttempts.textContent =
+                    totalAllQuizzes != null && totalAllQuizzes > perf.totalAttempts
+                        ? 'All quiz lengths combined'
+                        : 'Recorded quiz completions';
+            }
+            elAvg.textContent = `${perf.avgScore.toFixed(1)} / ${perf.maxScore}`;
+            if (hintScore) {
+                hintScore.textContent =
+                    perf.quizLength === 10
+                        ? '10-question practice quizzes'
+                        : `${perf.quizLength}-question quizzes (most data)`;
+            }
+            elPass.textContent = `${Math.round(perf.passRate)}%`;
+            if (hintPass) {
+                hintPass.textContent = `Scored at least ${Math.ceil(0.8 * perf.quizLength)} / ${perf.quizLength}`;
+            }
+        } else {
+            elAttempts.textContent =
+                totalAllQuizzes != null && totalAllQuizzes > 0
+                    ? totalAllQuizzes.toLocaleString()
+                    : '—';
+            if (hintAttempts) {
+                hintAttempts.textContent =
+                    totalAllQuizzes != null && totalAllQuizzes > 0
+                        ? 'No score histogram detail yet'
+                        : 'No quiz completions in histogram yet';
+            }
+            elAvg.textContent = '—';
+            elPass.textContent = '—';
+            if (hintScore) {
+                hintScore.textContent = '';
+            }
+            if (hintPass) {
+                hintPass.textContent = '';
+            }
+        }
+        const counts = this.pollQuestionDifficultyCounts(stats);
+        const qTotal =
+            counts.easy + counts.medium + counts.hard + counts.unrated;
+        barsEl.innerHTML = '';
+        if (barsWrap) {
+            barsWrap.setAttribute('aria-hidden', qTotal <= 0 ? 'true' : 'false');
+        }
+        if (qTotal > 0) {
+            const pctLabel = (n) => `${Math.round((100 * n) / qTotal)}%`;
+            const segments = [
+                { key: 'easy', n: counts.easy, className: 'home-dash-seg--easy', label: 'Easy' },
+                { key: 'medium', n: counts.medium, className: 'home-dash-seg--medium', label: 'Medium' },
+                { key: 'hard', n: counts.hard, className: 'home-dash-seg--hard', label: 'Hard' },
+                { key: 'unrated', n: counts.unrated, className: 'home-dash-seg--unrated', label: 'Unrated' }
+            ];
+            const ariaParts = segments
+                .filter((s) => s.n > 0)
+                .map((s) => `${s.label} ${pctLabel(s.n)}`);
+            barsEl.setAttribute(
+                'aria-label',
+                ariaParts.length ? `Question bank by difficulty: ${ariaParts.join(', ')}` : 'Difficulty distribution'
+            );
+            for (const seg of segments) {
+                if (seg.n <= 0) {
+                    continue;
+                }
+                const div = document.createElement('div');
+                div.className = `home-dash-seg ${seg.className}`;
+                div.style.flexGrow = String(seg.n);
+                div.style.flexBasis = '0';
+                div.title = `${seg.label}: ${pctLabel(seg.n)} of the bank`;
+                barsEl.appendChild(div);
+            }
+            legendEl.innerHTML = '';
+            for (const seg of segments) {
+                const li = document.createElement('li');
+                li.className = 'home-dash-legend-item';
+                const sw = document.createElement('span');
+                sw.className = `home-dash-legend-swatch home-dash-legend-swatch--${seg.key}`;
+                const txt = document.createElement('span');
+                txt.textContent = `${seg.label}: ${pctLabel(seg.n)}`;
+                li.appendChild(sw);
+                li.appendChild(txt);
+                legendEl.appendChild(li);
+            }
+        } else {
+            legendEl.innerHTML = '';
+            const li = document.createElement('li');
+            li.className = 'home-dash-legend-empty';
+            li.textContent = 'No questions loaded.';
+            legendEl.appendChild(li);
+        }
+        topicsEl.innerHTML = '';
+        const topicRows = this.getChallengingTopicRows(stats, 5);
+        if (topicRows.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'home-dash-topics-empty';
+            li.textContent = 'Not enough topic-level data yet.';
+            topicsEl.appendChild(li);
+        } else {
+            for (const row of topicRows) {
+                const li = document.createElement('li');
+                li.className = 'home-dash-topic-row';
+                const name = document.createElement('span');
+                name.className = 'home-dash-topic-name';
+                name.textContent = row.name;
+                const meta = document.createElement('span');
+                meta.className = 'home-dash-topic-meta';
+                meta.textContent = `${Math.round(row.rate * 100)}% correct · ${row.n.toLocaleString()} graded responses`;
+                li.appendChild(name);
+                li.appendChild(meta);
+                topicsEl.appendChild(li);
+            }
+        }
+        if (footnoteEl) {
+            footnoteEl.textContent =
+                'Counts are anonymous. Quiz attempts are completions, not unique people. Difficulty labels match the results review.';
+        }
+    }
+    
+    async refreshLandingDashboard() {
+        const dash = document.getElementById('home-community-dashboard');
+        if (dash) {
+            dash.classList.add('home-community-dashboard--loading');
+        }
+        let stats = null;
+        try {
+            stats = await this.loadCommunityStats();
+        } catch (e) {
+            console.warn('Landing dashboard stats:', e);
+        }
+        this.renderLandingDashboard(stats);
     }
     
     /**

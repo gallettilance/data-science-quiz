@@ -32,6 +32,8 @@
                 <h1>Data Science</h1>
                 <p class="subtitle">See how you stack up against everyone practicing here</p>
                 
+                <div class="home-landing-stack">
+                <div class="home-landing-panels">
                 <section class="home-practice-panel home-practice-panel--practice" aria-labelledby="home-practice-heading">
                     <header class="home-practice-header">
                         <div class="home-practice-title-row">
@@ -101,13 +103,55 @@
                         <span class="arrow">→</span>
                     </button>
                 </section>
+                </div>
                 
+                <section class="home-community-dashboard" id="home-community-dashboard" aria-labelledby="home-dash-title">
+                    <div class="home-dash-inner">
+                        <h2 id="home-dash-title" class="home-dash-title home-dash-head">Community snapshot</h2>
+                        <p class="home-dash-subtitle home-dash-lead">How the site is used and how questions behave in aggregate.</p>
+                        <div class="home-dash-cards" id="home-dash-cards">
+                            <article class="dashboard-card">
+                                <span class="dashboard-card-value" id="dash-total-attempts">…</span>
+                                <span class="dashboard-card-label">Quiz attempts</span>
+                                <span class="dashboard-card-hint" id="dash-attempts-hint">Anonymous completions recorded</span>
+                            </article>
+                            <article class="dashboard-card">
+                                <span class="dashboard-card-value" id="dash-avg-score">…</span>
+                                <span class="dashboard-card-label">Avg. score</span>
+                                <span class="dashboard-card-hint" id="dash-score-hint">From the busiest quiz length</span>
+                            </article>
+                            <article class="dashboard-card">
+                                <span class="dashboard-card-value" id="dash-pass-rate">…</span>
+                                <span class="dashboard-card-label">Strong scores (≥80%)</span>
+                                <span class="dashboard-card-hint" id="dash-pass-hint">Same quiz length as avg. score</span>
+                            </article>
+                        </div>
+                        <div class="home-dash-section home-dash-block--mix">
+                            <h3 class="home-dash-h3">Question mix (Easy / Medium / Hard)</h3>
+                            <p class="home-dash-hint">Uses the same chance-adjusted rules as the results review. Questions with fewer than 8 site responses count as unrated.</p>
+                            <div class="home-dash-diff-wrap" id="dash-difficulty-wrap" aria-hidden="true">
+                                <div class="home-dash-diff-bars" id="dash-difficulty-bars" role="img" aria-label="Difficulty distribution"></div>
+                            </div>
+                            <ul class="home-dash-diff-legend" id="dash-difficulty-legend"></ul>
+                        </div>
+                        <div class="home-dash-section home-dash-block--topics">
+                            <h3 class="home-dash-h3">Challenging topics</h3>
+                            <p class="home-dash-hint">Lowest community correct rate by topic (aggregated from question stats).</p>
+                            <ol class="home-dash-topics" id="dash-challenging-topics"></ol>
+                        </div>
+                        <p class="home-dash-footnote home-dash-foot" id="dash-footnote"></p>
+                    </div>
+                </section>
+                </div>
+                
+                <div class="home-landing-footer">
                 <a href="https://www.youtube.com/channel/UCgw4GbbAE-3dlJwcrOU0CcA" target="_blank" class="channel-link">
                     <span class="yt-logo">▶</span>
                     <span class="channel-name">Subscribe on YouTube</span>
                 </a>
                 
                 <div class="kofi-container" id="kofi-home"></div>
+                </div>
             </div>
         </div>
 
