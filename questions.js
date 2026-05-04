@@ -180,6 +180,40 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "Correlation is scale-invariant. Multiplying y by any positive constant doesn't change the correlation. The correlation between x and 2y is still r, not 2r."
     },
+    {
+        id: "correlation-21",
+        topic: "Correlation",
+        question: "X and Y have correlation coefficient r. Suppose you decrease all values of X by 10. What happens to r?",
+        answer: "r is unchanged",
+        alternatives: ["r is decreased", "r is increased", "depends on if X-10 flips the sign of X"],
+        explanation: "Pearson correlation is translation-invariant: replacing X with X - c leaves covariances and standard deviations of centered X unchanged, so r is the same."
+    },
+    {
+        id: "correlation-22",
+        topic: "Correlation",
+        question: "X and Y have correlation coefficient r. Suppose you multiply all values of Y by the same constant c. What happens to r?",
+        answer: "depends on if c flips the sign of Y",
+        alternatives: ["r is unchanged", "r is decreased", "r is increased"],
+        explanation: "Scaling Y by c > 0 leaves r unchanged; scaling by c < 0 flips the sign of r. (If c = 0, correlation is undefined.)"
+    },
+    {
+        id: "correlation-23",
+        topic: "Correlation",
+        question: "The correlation coefficient is unchanged by moving the point in the direction parallel to the dotted line.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "In general, moving a point in the scatterplot changes the covariance and standard deviations, so r changes. (This would only be true in a carefully constructed special case.)",
+        image: "images/correlation/4.png"
+    },
+    {
+        id: "correlation-24",
+        topic: "Correlation",
+        question: "The correlation coefficient is changed the most by moving the point in the direction orthogonal to the dotted line.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Moving a point orthogonal to the dotted line changes the covariance and standard deviations the most, so r changes the most.",
+        image: "images/correlation/5.png"
+    },
     // ==========================================
     // DISTANCE AND SIMILARITY
     // ==========================================
@@ -574,6 +608,14 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "Standardization changes distances between points. A feature with large variance can pull clusters in its direction when unscaled; after scaling, the geometry of the data changes, so cluster boundaries and assignments can differ."
     },
+    {
+        id: "kmeans-29",
+        topic: "K-Means",
+        question: "Consider the following dataset: {1, 2, 3, 5, 6, 7, x}. Applying K-means with k=2, what is the smallest value of x (x > 7) beyond which x will always be alone in its own cluster no matter the initialization?",
+        answer: "14.75",
+        alternatives: ["10", "14.5", "16.25", "24"],
+        explanation: "For worst-case initialization among centroid pairs from the data, x must exceed approximately 14.75 so that no run leaves x grouped with points to its left without eventually isolating x."
+    },
     // ==========================================
     // HIERARCHICAL CLUSTERING
     // ==========================================
@@ -765,6 +807,66 @@ const QUESTIONS = [
         answer: "False",
         alternatives: ["True"],
         explanation: "DBSCAN automatically determines the number of clusters based on density. You specify ε (neighborhood radius) and minPts, not the number of clusters."
+    },
+    {
+        id: "dbscan-9",
+        topic: "DBSCAN",
+        question: "Consider the following dataset: {1, 2, 3, 5, 6, 7, x}. Applying DBSCAN with $\\epsilon = 1.5$ and min_pts = 2, what is the smallest value of x (x > 7) beyond which x will be a noise point?",
+        answer: "8.5",
+        alternatives: ["9.5", "10.5", "11.5"],
+        explanation: "x must be more than 1.5 away from 7 to have no neighbor within $\\epsilon$ (and fail to be core/border in a one-dimensional chain), so x > 8.5. The smallest listed threshold is 8.5."
+    },
+    {
+        id: "dbscan-10",
+        topic: "DBSCAN",
+        question: "DBSCAN is better suited for this dataset than K-means:",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Non-convex (e.g. crescent) clusters are a classic case where density-based DBSCAN can succeed while K-means (spherical centroids) often fails.",
+        image: "images/kmeans/1.png"
+    },
+    {
+        id: "dbscan-11",
+        topic: "DBSCAN",
+        question: "Consider the following dataset: {1, 2, 3, 5, 6, 8}. Applying DBSCAN with $\\epsilon = 1.5$ and min_pts = 2. 5 and 6 are noise points.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "With $\\epsilon = 1.5$, 5 and 6 are within each other's neighborhood and can be core or border points connected to the rest of the chain; they are not both isolated noise."
+    },
+    {
+        id: "dbscan-12",
+        topic: "DBSCAN",
+        question: "Hierarchical clustering is better suited for this dataset than K-means:",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "For elongated or non-convex structure, agglomerative methods (e.g. single-link) can follow the shape better than K-means with Euclidean globular clusters.",
+        image: "images/kmeans/1.png"
+    },
+    {
+        id: "dbscan-13",
+        topic: "DBSCAN",
+        question: "Consider the following dataset: {1, 2, 3, 5, 6, 8}. Applying DBSCAN with $\\epsilon = 1.5$ and min_pts = 2. 1 and 3 are border points.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "In this 1D setup, 1 and 3 are part of the dense chain and qualify as core points (enough neighbors within $\\epsilon$), not merely border."
+    },
+    {
+        id: "dbscan-14",
+        topic: "DBSCAN",
+        question: "DBSCAN is better suited for this dataset than K-means:",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Two moons / curved clusters separate by density better under DBSCAN than under K-means.",
+        image: "images/kmeans/2.png"
+    },
+    {
+        id: "dbscan-15",
+        topic: "DBSCAN",
+        question: "Hierarchical clustering is better suited for this dataset than K-means:",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Single-link and related hierarchical methods can trace elongated structure; K-means assumes roughly spherical clusters.",
+        image: "images/kmeans/2.png"
     },
     // ==========================================
     // GMM (Gaussian Mixture Models)
@@ -1031,6 +1133,22 @@ const QUESTIONS = [
         alternatives: ["Anomaly Detection", "Dimensionality Reduction"],
         explanation: "Low-rank approximation via SVD removes noise by discarding small singular values (assumed to be noise)."
     },
+    {
+        id: "svd-16",
+        topic: "SVD",
+        question: "In LSA, the latent factors that are learned and allow for words to be embedded in a vector space are orthogonal.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The truncated SVD yields orthogonal left/right singular vectors; rows of UΣ (or similar) live in an orthogonal coordinate system."
+    },
+    {
+        id: "svd-17",
+        topic: "SVD",
+        question: "In LSA, the same word will have the same embedding in the vector space regardless of its context. For example, cancer the disease and cancer the astrological sign will be indistinguishable.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Classic LSA assigns one vector per word type from the document-term matrix; there is no separate contextual representation per sense."
+    },
     // ==========================================
     // KNN
     // ==========================================
@@ -1122,6 +1240,23 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "KNN is a lazy learner with essentially no training time—it just stores the data. The computational cost is at prediction time when it searches for nearest neighbors."
     },
+    {
+        id: "knn-12",
+        topic: "KNN",
+        question: "Consider using KNN and logistic regression on a dataset where Y follows a Bernoulli Distribution according to the assumptions of Logistic Regression. As the number of data points increases, the decision boundary of KNN will approach the decision boundary of logistic regression.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Under correct specification and regularity, KNN is consistent for P(Y|X) and the estimated logistic boundary is consistent for the true linear boundary, so the estimated boundaries agree in the limit."
+    },
+    {
+        id: "knn-13",
+        topic: "KNN",
+        question: "Running KNN with K=3 on the following dataset will result in a training set accuracy of:",
+        answer: "0%",
+        alternatives: ["100%", "66.67%", "50%"],
+        explanation: "On a checkerboard-like class layout, each point's three nearest neighbors are usually majority of the opposite class, so leave-one-out-style training accuracy can be 0%.",
+        image: "images/knn/1.png"
+    },
     // ==========================================
     // DECISION TREES
     // ==========================================
@@ -1199,6 +1334,14 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "Greedy GINI minimization doesn't guarantee the globally best tree. A split that seems worse locally might lead to a better overall tree. Finding the optimal tree is NP-hard."
     },
+    {
+        id: "dtree-10",
+        topic: "Decision Trees",
+        question: "On a linearly separable dataset, the decision boundary of a decision tree will always be a straight line.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Axis-aligned splits produce piecewise constant boundaries (staircase / union of rectangles), not necessarily a single straight line, unless depth and splits align perfectly."
+    },
     // ==========================================
     // NAIVE BAYES
     // ==========================================
@@ -1267,6 +1410,22 @@ const QUESTIONS = [
         answer: "False",
         alternatives: ["True"],
         explanation: "Naive Bayes can produce quadratic decision boundaries when class-conditional distributions have different variances. Only with equal variances is it linear."
+    },
+    {
+        id: "naivebayes-9",
+        topic: "Naive Bayes",
+        question: "Naive Bayes decision boundary is always a straight line.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "With Gaussian or multinomial features and more than two classes or nonlinear likelihoods, boundaries need not be a single hyperplane."
+    },
+    {
+        id: "naivebayes-10",
+        topic: "Naive Bayes",
+        question: "Naive Bayes and Logistic Regression find identical solutions when the dataset is linearly separable.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "They maximize different objectives (generative vs discriminative); linear separability does not force the same decision boundary."
     },
     // ==========================================
     // SVM (Support Vector Machines)
@@ -1546,6 +1705,30 @@ const QUESTIONS = [
         alternatives: ["False"],
         explanation: "The OLS normal equations ensure $\\sum e_i = 0$ when an intercept is included. This is why the regression line passes through $(\\bar{x}, \\bar{y})$."
     },
+    {
+        id: "linreg-9",
+        topic: "Linear Regression",
+        question: "In linear regression, it is assumed that Y follows a normal distribution.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Classical inference assumes errors ε are normal given X; the marginal distribution of Y need not be normal."
+    },
+    {
+        id: "linreg-10",
+        topic: "Linear Regression",
+        question: "In linear regression, if all data points are on the same line, the model will have infinite solutions.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "For simple linear regression with varying X, OLS recovers that unique line. Infinite solutions arise from rank deficiency (e.g. perfect multicollinearity among predictors), not merely collinear data."
+    },
+    {
+        id: "linreg-11",
+        topic: "Linear Regression",
+        question: "In linear regression, MLE and Least Squares are equivalent (i.e. they find the same solution).",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "With normal errors, maximizing Gaussian likelihood for β is equivalent to minimizing squared residuals (OLS)."
+    },
     // ==========================================
     // HYPOTHESIS TESTING
     // ==========================================
@@ -1744,6 +1927,22 @@ const QUESTIONS = [
         alternatives: ["False"],
         explanation: "Multiclass logistic regression (softmax) produces linear boundaries between each pair of classes. The overall boundary is piecewise linear, with different linear pieces separating different class pairs."
     },
+    {
+        id: "logreg-16",
+        topic: "Logistic Regression",
+        question: "Two points that are the same distance from the decision boundary will have the same probability of being in the same class.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Same perpendicular distance can occur on opposite sides of the boundary, giving complementary probabilities for the positive class."
+    },
+    {
+        id: "logreg-17",
+        topic: "Logistic Regression",
+        question: "In Logistic Regression with 3 classes, the decision boundary is where the softmax function equals 1/3.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Pairwise class boundaries are where two logits are equal (often giving probability 1/2 for that pair under softmax), not where all three probabilities are 1/3 on a single surface."
+    },
     // ==========================================
     // NEURAL NETWORKS
     // ==========================================
@@ -1866,6 +2065,30 @@ const QUESTIONS = [
         answer: "False",
         alternatives: ["True"],
         explanation: "If the bias is initialized to a small negative value, then more data will be negative than positive after the linear transformation. Since ReLU is 0 for negative values, less than 50% of data points will make the neuron activate."
+    },
+    {
+        id: "nn-16",
+        topic: "Neural Networks",
+        question: "Since the step size is constant, gradient descent will always take the same number of steps to converge.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Convergence speed depends on curvature, conditioning, and path; constant step size does not fix iteration count."
+    },
+    {
+        id: "nn-17",
+        topic: "Neural Networks",
+        question: "Since the step size is constant, each change to the parameters will be by the same amount.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "The update is learning rate times gradient; gradients vary across steps and coordinates."
+    },
+    {
+        id: "nn-18",
+        topic: "Neural Networks",
+        question: "Given the same learning rate and initial parameters, repeating gradient descent will always converge to the same solution.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Non-convex losses can have multiple minima; stochasticity or numerical effects can also yield different outcomes."
     },
 ];
 
