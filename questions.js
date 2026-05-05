@@ -281,15 +281,15 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "By definition, a distance function (metric) must satisfy non-negativity: $d(x,y) \\geq 0$ for all x, y."
     },
-    // {
-    //     id: "distance-9",
-    //     topic: "Distance Functions",
-    //     question: "Which of the following is a unit circle created using a dissimilarity function that is not a distance function?",
-    //     answer: "C",
-    //     alternatives: ["A", "B"],
-    //     explanation: "Option C shows a non-convex shape which violates the triangle inequality, making it a dissimilarity but not a proper distance metric.",
-    //     image: "images/distance&similarity/p1:2.png"
-    // },
+    {
+        id: "distance-9",
+        topic: "Distance Functions",
+        question: "The following is a unit circle created by a distance function.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Two points on the boundary of the circle can be joined by a straight line that leaves the circle, which violates the triangle inequality.",
+        image: "images/distance/2.png"
+    },
     {
         id: "distance-10",
         topic: "Distance Functions",
@@ -306,14 +306,14 @@ const QUESTIONS = [
         alternatives: ["-1", "0", "depends on the size of the documents"],
         explanation: "Jaccard distance = 1 - Jaccard similarity. With no overlap, Jaccard similarity = 0, so Jaccard distance = 1."
     },
-    // {
-    //     id: "distance-12",
-    //     topic: "Distance Functions",
-    //     question: "If x and y are sets of words represented as presence/absence vectors, the L1 distance between these vectors is just the Jaccard distance multiplied by the size of the union x ∪ y.",
-    //     answer: "False",
-    //     alternatives: ["True"],
-    //     explanation: "L1 distance counts the symmetric difference (elements in exactly one set), while Jaccard distance = |symmetric difference| / |union|. They're related but not by simple multiplication."
-    // },
+    {
+        id: "distance-12",
+        topic: "Distance Functions",
+        question: "Two documents are encoded as binary presence/absence vectors over the same fixed vocabulary, with aligned coordinates (entry i refers to the same word type in both vectors). Under these conditions, the L1 distance between x and y is proportional to the Jaccard distance",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "For binary vectors, L1 equals the symmetric-difference size (each differing bit contributes 1). Jaccard distance (1 − Jaccard similarity) equals that size divided by |A ∪ B|, so L1 = (Jaccard distance) × |A ∪ B|."
+    },
     {
         id: "distance-13",
         topic: "Distance Functions",
