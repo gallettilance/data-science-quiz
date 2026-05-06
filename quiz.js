@@ -5,7 +5,7 @@
 
 const STORAGE_KEY = 'ds_quiz_history';
 const COURSE_PROGRESS_KEY = 'ds_course_progress';
-const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbxw0eN6l4zXXpLKxCHEYhpCijcER13t11feBwZjhvZp1a2smEDutUnn996PNWz-rsOz/exec';
+const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbzwButXKSADX99qnNz_V5FZNXlu8V0P0PuI3e-oVM-xDKplMnc7QNy0pAMZKCfvv8w6/exec';
 
 /** Min site responses per question before we show Easy/Medium/Hard (30+ is ideal; lower = noisier). */
 const MIN_QUESTION_N_FOR_DIFFICULTY = 8;
@@ -965,25 +965,17 @@ class DataScienceCourse {
     
     sendAnalytics() {
         try {
-            // Build detailed answer data
             const answers = this.userAnswers.map(a => ({
                 id: a.question.id,
                 selected: a.userAnswer,
-                correct: a.question.answer,
                 isCorrect: a.wasCorrect
             })).filter(a => a.id);
-            
-            const allIds = answers.map(a => a.id);
-            const wrongIds = answers.filter(a => !a.isCorrect).map(a => a.id);
-            
+
             const data = {
                 mode: this.currentMode,
                 score: this.score,
                 total: this.actualNumQuestions,
-                topics: Array.from(this.selectedTopics),
-                wrongIds: wrongIds,
-                allIds: allIds,
-                answers: answers  // Detailed per-question data
+                answers
             };
             
             // Send to Google Sheets (fire and forget)
