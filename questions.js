@@ -98,7 +98,7 @@ const QUESTIONS = [
         question: "True or False: Normalizing (or standardizing) both variables changes their correlation coefficient.",
         answer: "False",
         alternatives: ["True"],
-        explanation: "Correlation is scale-invariant. Standardizing (subtracting mean and dividing by standard deviation) does not change the correlation coefficient."
+        explanation: "Correlation is scale-invariant. Standardizing (subtracting mean and dividing by standard deviation) does not change the correlation coefficient. Counterexample: any nonzero-$r$ dataset keeps the same Pearson $r$ after standardizing both variables (centering and scaling each column)."
     },
     {
         id: "correlation-11",
@@ -261,9 +261,9 @@ const QUESTIONS = [
         id: "distance-6",
         topic: "Distance Functions",
         question: "All Lp unit circles for $p \\geq 1$ have the same perimeter when measured with L1.",
-        answer: "False",
-        alternatives: ["True"],
-        explanation: "Different Lp unit circles have different shapes and thus different L1 perimeters. The L1 unit circle is a diamond, L2 is a circle, etc."
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Different Lp unit circles have different shapes but all perimeters when measured with L1 are the same."
     },
     {
         id: "distance-7",
@@ -370,6 +370,14 @@ const QUESTIONS = [
         answer: "Cosine distance ($1 - \\text{cosine similarity}$)",
         alternatives: ["Manhattan and Euclidean distances", "Chebyshev distance (when $p = \\infty$)", "All of the above"],
         explanation: "Cosine similarity depends only on the angle between vectors, not their magnitudes. Manhattan, Euclidean, and Chebyshev all scale with the coordinates."
+    },
+    {
+        id: "distance-20",
+        topic: "Distance Functions",
+        question: "Cosine distance, defined as one minus cosine similarity between vectors, is guaranteed to satisfy the triangle inequality for all vector triples in Euclidean space.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Cosine distance $d(u,v)=1-\\cos\\angle(u,v)$ need not satisfy the triangle inequality. Counterexample in $\\mathbb{R}^2$: take $u=(1,0)$, $v=(1,1)$, $w=(0,1)$. Then $d(u,v)=d(v,w)=1-1/\\sqrt{2}\\approx 0.29$, but $d(u,w)=1$, and $0.29+0.29<1$, so $d(u,w)>d(u,v)+d(v,w)$. Cosine distance is still widely used in retrieval when angular closeness is what matters."
     },
     // ==========================================
     // K-MEANS CLUSTERING
@@ -738,6 +746,54 @@ const QUESTIONS = [
         alternatives: ["False"],
         explanation: "The merging order is the same for single-link and complete-link distance."
     },
+    {
+        id: "hierarchical-15",
+        topic: "Hierarchical Clustering",
+        question: "Single-link clustering tends to create chain-like clusters because merges use:",
+        answer: "The minimum distance between any two points across clusters.",
+        alternatives: ["The maximum distance between any two points across clusters", "The average of all pairwise distances", "Ward's increase in within-cluster sum of squares only"],
+        explanation: "Single-link can bridge through a series of close points; complete-link discourages long bridges."
+    },
+    {
+        id: "hierarchical-16",
+        topic: "Hierarchical Clustering",
+        question: "The vertical height where you cut a dendrogram roughly encodes:",
+        answer: "How dissimilar merged groups were at the time they joined.",
+        alternatives: ["The number of points in the dataset", "Silhouette of the final $k$", "PCA variance explained"],
+        explanation: "Heights track linkage distance at merge events; lower merges happen at smaller dissimilarity."
+    },
+    {
+        id: "hierarchical-17",
+        topic: "Hierarchical Clustering",
+        question: "Some linkage updates can produce non-monotone heights (inversions) which are unsettling because:",
+        answer: "A later merge might appear at a lower height than an earlier one, contradicting a clean ultra-metric story.",
+        alternatives: ["Dendrograms then become undrawable", "K must be 1", "DBSCAN is required"],
+        explanation: "Certain centroid/median linkages can invert; standard single/complete/ward avoid this."
+    },
+    {
+        id: "hierarchical-18",
+        topic: "Hierarchical Clustering",
+        question: "Agglomerative hierarchical clustering is often avoided for very large $n$ mainly because:",
+        answer: "Naive implementations require large quadratic or worse time and memory for distance maintenance.",
+        alternatives: ["It cannot use Euclidean distance", "It always returns one cluster", "Linkage does not matter"],
+        explanation: "Scalability limits favor k-means, BIRCH, or approximations for big data."
+    },
+    {
+        id: "hierarchical-19",
+        topic: "Hierarchical Clustering",
+        question: "You run agglomerative hierarchical clustering with Euclidean distance on raw features where annual income is in thousands of dollars and age is in years. Compared with clustering after standardizing each column (zero mean, unit variance), raw-scale clustering will:",
+        answer: "Let income differences dominate pairwise distances because their numerical spread is far larger than age's.",
+        alternatives: ["Treat income and age as equally influential regardless of scale", "Automatically rescale columns inside the linkage step", "Always produce the same merge order as standardized clustering"],
+        explanation: "Euclidean distance sums squared differences across features; large-variance columns dominate unless you standardize, rescale manually, or use a distance that neutralizes scale."
+    },
+    {
+        id: "hierarchical-20",
+        topic: "Hierarchical Clustering",
+        question: "Tie-breaking when distances are equal can change merge orders in agglomerative clustering, so:",
+        answer: "Reproducibility and stability checks matter when ties are common.",
+        alternatives: ["Ties are impossible in Euclidean space", "Complete-link always breaks ties identically", "Dendrograms become unique automatically"],
+        explanation: "Implementation-defined tie order can affect downstream cluster labels when equidistant."
+    },
     // ==========================================
     // DBSCAN CLUSTERING
     // ==========================================
@@ -806,7 +862,7 @@ const QUESTIONS = [
         question: "DBSCAN like K-means requires you to specify the number of clusters.",
         answer: "False",
         alternatives: ["True"],
-        explanation: "DBSCAN automatically determines the number of clusters based on density. You specify ε (neighborhood radius) and minPts, not the number of clusters."
+        explanation: "DBSCAN automatically determines the number of clusters based on density. You specify ε (neighborhood radius) and minPts, not the number of clusters. Counterexample: users set $\varepsilon$ and minPts; cluster count emerges from density connectivity, not a preset $k$."
     },
     {
         id: "dbscan-9",
@@ -1348,18 +1404,18 @@ const QUESTIONS = [
     {
         id: "naivebayes-1",
         topic: "Naive Bayes",
-        question: "Naive Bayes should not be used if the features are: [total_price, unit_price, quantity]",
+        question: "You are building a spam filter on exported purchase receipts. Every row lists unit price, quantity purchased, and line total, and the database always stores line total as unit price times quantity. Feeding unit price, quantity, and line total into Naive Bayes as three unrelated inputs misrepresents how those columns relate on each row. Naive Bayes should not be used in this way.",
         answer: "True",
         alternatives: ["False"],
-        explanation: "These features are dependent (total = unit × quantity) and the 'naive' assumption is violated."
+        explanation: "Line total is fixed by the other two columns on every row, so the three fields are not independent pieces of evidence in this setup. Naive Bayes multiplies separate likelihoods as if features were unrelated given the class; that story does not match this bookkeeping."
     },
     {
         id: "naivebayes-2",
         topic: "Naive Bayes",
-        question: "Naive Bayes should not be used if the features are: [is_circle, is_not_circle]",
+        question: "You are classifying product photos from a spreadsheet where each item has two columns, labeled \"is a circle\" and \"is not a circle,\" and the second entry is always the opposite of the first. Treating those two columns as separate, unrelated inputs misrepresents the data. Naive Bayes should not be used in this way.",
         answer: "True",
         alternatives: ["False"],
-        explanation: "These features are dependent and the 'naive' assumption is violated."
+        explanation: "The second column adds no new information beyond the first in this labeling workflow. Feeding both into Naive Bayes as independent factors does not match how the spreadsheet was built."
     },
     {
         id: "naivebayes-3",
@@ -1426,6 +1482,46 @@ const QUESTIONS = [
         answer: "False",
         alternatives: ["True"],
         explanation: "They maximize different objectives (generative vs discriminative); linear separability does not force the same decision boundary."
+    },
+    {
+        id: "naivebayes-11",
+        topic: "Naive Bayes",
+        question: "A clinic spreadsheet predicts whether a patient is in the diabetes follow-up program using blood glucose (mg/dL) and the exact same reading converted to mmol/L on every row. Both numeric columns are fed into Naive Bayes as unrelated inputs. Naive Bayes should not be used in this way.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The two columns are one physical measurement expressed twice. Treating them as separate multiplicative factors in the naive likelihood product ignores that relationship."
+    },
+    {
+        id: "naivebayes-12",
+        topic: "Naive Bayes",
+        question: "You predict whether students pass or fail the course from weekly study hours and how many practice quizzes they completed. Both columns come straight from the learning-management system and neither is computed from the other. Your colleague says that running Naive Bayes on those two inputs is inappropriate for this grade prediction task. Naive Bayes should not be used in this way.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Study hours and quiz counts are separate behavioral signals, not duplicate encodings of one fact. Naive Bayes is often used here as a simple baseline even when features correlate somewhat."
+    },
+    {
+        id: "naivebayes-13",
+        topic: "Naive Bayes",
+        question: "A property database predicts late rent using monthly rent, tenant credit score, and months on the lease. Each field is entered separately and none is derived from the others on the form. Your teammate insists Naive Bayes is the wrong tool here because tabular money and credit fields never belong in a naive model. Naive Bayes should not be used in this way.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "These columns are separate facts about the lease and tenant. Nothing in the setup makes them redundant copies of one another; Naive Bayes on categorical or discretized versions of such inputs is a standard baseline."
+    },
+    {
+        id: "naivebayes-14",
+        topic: "Naive Bayes",
+        question: "A customer survey asks two separate yes/no questions: whether they want product updates by email and whether they want alerts by text message. A shopper can say yes to both, no to both, or yes to only one. A coworker concludes that Naive Bayes must never see both answers as separate inputs because that always misrepresents the survey. Naive Bayes should not be used in this way.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Email and text preferences are not redundant opposites here; they can vary independently. There is no blanket rule against Naive Bayes for these two fields."
+    },
+    {
+        id: "naivebayes-15",
+        topic: "Naive Bayes",
+        question: "A warehouse tracks each batch with storage zone (cold chain or ambient shelf), days since production, and the inspector's quality rating. Those three fields are recorded independently and no column is a fixed arithmetic combination of the others. A teammate argues that Naive Bayes is the wrong choice here only because three different measurements sit on the same row about one shipment. Naive Bayes should not be used in this way.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Zone, age, and rating are distinct measurements in this story. Having several fields per row is normal; Naive Bayes is a reasonable starting model after suitable encoding."
     },
     // ==========================================
     // SVM (Support Vector Machines)
@@ -1729,6 +1825,14 @@ const QUESTIONS = [
         alternatives: ["False"],
         explanation: "With normal errors, maximizing Gaussian likelihood for β is equivalent to minimizing squared residuals (OLS)."
     },
+    {
+        id: "linreg-12",
+        topic: "Linear Regression",
+        question: "Modeling $\\log(Y)$ versus modeling $Y$ changes interpretation because coefficients describe multiplicative percentage-like shifts on the original scale rather than additive units.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Transformations encode hypotheses about how effects compound."
+    },
     // ==========================================
     // HYPOTHESIS TESTING
     // ==========================================
@@ -1943,6 +2047,22 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "Pairwise class boundaries are where two logits are equal (often giving probability 1/2 for that pair under softmax), not where all three probabilities are 1/3 on a single surface."
     },
+    {
+        id: "logreg-18",
+        topic: "Logistic Regression",
+        question: "The negative log likelihood function is never actually negative.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The negative log likelihood function is always non-negative because it is the negative of the log of a probability, which is always between 0 and 1."
+    },
+    {
+        id: "logreg-19",
+        topic: "Logistic Regression",
+        question: "The negative log likelihood function is always greater or equal to zero.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The negative log likelihood function is always non-negative because it is the negative of the log of a probability, which is always between 0 and 1."
+    },
     // ==========================================
     // NEURAL NETWORKS
     // ==========================================
@@ -2090,6 +2210,14 @@ const QUESTIONS = [
         alternatives: ["True"],
         explanation: "Non-convex losses can have multiple minima; stochasticity or numerical effects can also yield different outcomes."
     },
+    {
+        id: "nn-19",
+        topic: "Neural Networks",
+        question: "If the partial derivative of the loss function with respect to a parameter is small, that always means the parameter is not very important for the loss function.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "A partial derivative measures how fast the loss changes when you nudge only that parameter, holding all others fixed—so a small value does not always mean the parameter is unimportant. Counterexample (scale): a weight on a very large feature can strongly affect predictions while $\\partial L/\\partial w$ stays small because of how the chain rule scales. Counterexample (coupling): with correlated or redundant parameters, the loss can drop steeply along a combined direction even when each coordinate's partial derivative is near zero."
+    }
 ];
 
 // Make QUESTIONS available globally
