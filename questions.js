@@ -236,7 +236,7 @@ const QUESTIONS = [
     {
         id: "distance-3",
         topic: "Distance Functions",
-        question: "All rotations preserve the L2 lengths of the sides or a triangle. Not all rotations preserve the L1 lengths of the sides of a triangle.",
+        question: "All rotations preserve the L2 lengths of the sides of a triangle. Not all rotations preserve the L1 lengths of the sides of a triangle.",
         answer: "True",
         alternatives: ["False"],
         explanation: "Euclidean (L2) distance is rotation-invariant, but Manhattan (L1) distance is not. Rotating a shape changes its L1 distances."
@@ -749,18 +749,10 @@ const QUESTIONS = [
     {
         id: "hierarchical-15",
         topic: "Hierarchical Clustering",
-        question: "Single-link clustering tends to create chain-like clusters because merges use:",
-        answer: "The minimum distance between any two points across clusters.",
-        alternatives: ["The maximum distance between any two points across clusters", "The average of all pairwise distances", "Ward's increase in within-cluster sum of squares only"],
-        explanation: "Single-link can bridge through a series of close points; complete-link discourages long bridges."
-    },
-    {
-        id: "hierarchical-16",
-        topic: "Hierarchical Clustering",
-        question: "The vertical height where you cut a dendrogram roughly encodes:",
-        answer: "How dissimilar merged groups were at the time they joined.",
-        alternatives: ["The number of points in the dataset", "Silhouette of the final $k$", "PCA variance explained"],
-        explanation: "Heights track linkage distance at merge events; lower merges happen at smaller dissimilarity."
+        question: "Single-link clustering tends to create chain-like clusters.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Single-link merges the closest pair of points across clusters, so a chain of nearby points gets absorbed into one cluster. Complete-link discourages those long bridges."
     },
     {
         id: "hierarchical-17",
@@ -785,14 +777,6 @@ const QUESTIONS = [
         answer: "Let income differences dominate pairwise distances because their numerical spread is far larger than age's.",
         alternatives: ["Treat income and age as equally influential regardless of scale", "Automatically rescale columns inside the linkage step", "Always produce the same merge order as standardized clustering"],
         explanation: "Euclidean distance sums squared differences across features; large-variance columns dominate unless you standardize, rescale manually, or use a distance that neutralizes scale."
-    },
-    {
-        id: "hierarchical-20",
-        topic: "Hierarchical Clustering",
-        question: "Tie-breaking when distances are equal can change merge orders in agglomerative clustering, so:",
-        answer: "Reproducibility and stability checks matter when ties are common.",
-        alternatives: ["Ties are impossible in Euclidean space", "Complete-link always breaks ties identically", "Dendrograms become unique automatically"],
-        explanation: "Implementation-defined tie order can affect downstream cluster labels when equidistant."
     },
     // ==========================================
     // DBSCAN CLUSTERING
@@ -1005,7 +989,7 @@ const QUESTIONS = [
     {
         id: "clustereval-2",
         topic: "Clustering Evaluation",
-        question: "A silhouette score of a point is the scaled difference between its average distance to other points in its cluster to the minimum average distance to points in other clusters.",
+        question: "A silhouette score of a point is $(b-a)/\\max(a,b)$, where $a$ is its average distance to the other points in its cluster and $b$ is the minimum, over the other clusters, of its average distance to points in that cluster.",
         answer: "True",
         alternatives: ["False"],
         explanation: "Silhouette = (b-a)/max(a,b), where a = avg distance within cluster, b = avg distance to nearest other cluster."

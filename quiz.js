@@ -5,6 +5,7 @@
 
 const STORAGE_KEY = 'ds_quiz_history';
 const COURSE_PROGRESS_KEY = 'ds_course_progress';
+const DAILY_LIMIT_KEY = 'ds_quiz_daily_limit';
 const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbzwButXKSADX99qnNz_V5FZNXlu8V0P0PuI3e-oVM-xDKplMnc7QNy0pAMZKCfvv8w6/exec';
 
 /** Min site responses per question before we show Easy/Medium/Hard (30+ is ideal; lower = noisier). */
@@ -52,31 +53,26 @@ class DataScienceCourse {
         tag.src = 'https://www.youtube.com/iframe_api';
         const firstScript = document.getElementsByTagName('script')[0];
         firstScript.parentNode.insertBefore(tag, firstScript);
-        
-        // Set up the callback for when API is ready
+
         window.onYouTubeIframeAPIReady = () => {
             this.ytApiReady = true;
         };
     }
-    
+
     createYouTubePlayer(videoId) {
-        // Destroy existing player if any
         if (this.ytPlayer) {
             this.ytPlayer.destroy();
             this.ytPlayer = null;
         }
-        
-        // Clear any existing watch interval
+
         if (this.videoWatchInterval) {
             clearInterval(this.videoWatchInterval);
             this.videoWatchInterval = null;
         }
-        
-        // Hide placeholder, show player container
+
         this.videoPlaceholder.style.display = 'none';
         this.youtubePlayerContainer.style.display = 'block';
-        
-        // Create new player
+
         this.ytPlayer = new YT.Player('youtube-player', {
             height: '100%',
             width: '100%',
@@ -150,18 +146,16 @@ class DataScienceCourse {
     
     updateLessonProgress() {
         if (!this.currentLesson) return;
-        
+
         const videoWatched = this.isVideoWatched(this.currentLesson.id);
         const quizPassed = this.isQuizPassed(this.currentLesson.id);
-        
-        // Update video step
+
         if (videoWatched) {
             this.stepVideo.classList.add('completed');
         } else {
             this.stepVideo.classList.remove('completed');
         }
-        
-        // Update quiz step
+
         if (quizPassed) {
             this.stepQuiz.classList.add('completed');
         } else {
@@ -302,14 +296,9 @@ class DataScienceCourse {
         // Course progress preview - only count lessons with videos
         // Fully complete = video watched AND quiz passed
         const progress = this.getCourseProgress();
-        const lessonsWithVideos = this.curriculum.filter(l => this.hasVideo(l));
-        const fullyCompleted = lessonsWithVideos.filter(lesson => {
-            const quizPassed = progress.completed && progress.completed.includes(lesson.id);
-            const videoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
-            return quizPassed && videoWatched;
-        });
-        const completedCount = fullyCompleted.length;
-        const totalCount = lessonsWithVideos.length;
+        const topics = this.availableTopics();
+        const completedCount = topics.filter(entry => this.isTopicComplete(entry, progress)).length;
+        const totalCount = topics.length;
         const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
         
         const progressPreview = this.courseProgressPreview;
@@ -351,11 +340,11 @@ class DataScienceCourse {
     getCourseProgress() {
         try {
             const data = localStorage.getItem(COURSE_PROGRESS_KEY);
-            const defaults = { completed: [], currentLesson: 1, videosWatched: [] };
+            const defaults = { completed: [], currentLesson: 1, videosWatched: [], resume: {} };
             return data ? { ...defaults, ...JSON.parse(data) } : defaults;
         } catch (e) {
             console.error('Error reading course progress:', e);
-            return { completed: [], currentLesson: 1, videosWatched: [] };
+            return { completed: [], currentLesson: 1, videosWatched: [], resume: {} };
         }
     }
     
@@ -377,8 +366,10 @@ class DataScienceCourse {
             progress.completed.push(lessonId);
         }
         // Move to next lesson if this was the current one
-        if (lessonId === progress.currentLesson && lessonId < this.curriculum.length) {
-            progress.currentLesson = lessonId + 1;
+        const topics = this.availableTopics();
+        const index = topics.findIndex(entry => entry.id === lessonId);
+        if (lessonId === progress.currentLesson && index >= 0 && index < topics.length - 1) {
+            progress.currentLesson = topics[index + 1].id;
         }
         this.saveCourseProgress(progress);
         this.courseProgress = progress;
@@ -391,100 +382,94 @@ class DataScienceCourse {
     hasVideo(lesson) {
         return lesson.videoId && lesson.videoId !== 'YOUR_VIDEO_ID_HERE';
     }
-    
+
+    availableTopics() {
+        return this.curriculum.filter(entry => this.hasVideo(entry));
+    }
+
+    isTopicComplete(entry, progress) {
+        const watched = progress.videosWatched || [];
+        const passed = progress.completed || [];
+        return watched.includes(entry.id) && passed.includes(entry.id);
+    }
+
     renderCurriculumList() {
         const progress = this.getCourseProgress();
-        
-        // Count only lessons with videos for progress
-        // A lesson is fully complete when both video is watched AND quiz is passed
         const lessonsWithVideos = this.curriculum.filter(l => this.hasVideo(l));
-        const fullyCompleted = lessonsWithVideos.filter(lesson => {
-            const quizPassed = progress.completed && progress.completed.includes(lesson.id);
-            const videoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
-            return quizPassed && videoWatched;
-        });
+        const fullyCompleted = lessonsWithVideos.filter(lesson => this.isTopicComplete(lesson, progress));
         const completedCount = fullyCompleted.length;
         const totalCount = lessonsWithVideos.length;
-        
-        // Update progress bar
+
         const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
         this.courseProgressFill.style.width = `${progressPercent}%`;
-        this.courseProgressText.textContent = totalCount > 0 
+        this.courseProgressText.textContent = totalCount > 0
             ? `${completedCount} of ${totalCount} available topics completed`
             : 'No videos available yet';
-        
-        // Render curriculum items
+
         this.curriculumList.innerHTML = '';
-        
-        this.curriculum.forEach((lesson, index) => {
+
+        this.curriculum.forEach((lesson) => {
             const isQuizPassed = progress.completed && progress.completed.includes(lesson.id);
             const isVideoWatched = progress.videosWatched && progress.videosWatched.includes(lesson.id);
-            const isCompleted = isQuizPassed && isVideoWatched; // Both required for full completion
+            const isCompleted = isQuizPassed && isVideoWatched;
             const isCurrent = lesson.id === progress.currentLesson;
             const isLocked = !this.hasVideo(lesson);
-            
+
             const item = document.createElement('div');
             item.className = 'curriculum-item';
             if (isCompleted && !isLocked) item.classList.add('completed');
             if (isCurrent && !isCompleted && !isLocked) item.classList.add('current');
             if (isLocked) item.classList.add('locked');
-            
+
             let statusText = '';
             let statusIcons = '';
-            if (isLocked) {
-                statusText = '';
-            } else if (isCompleted) {
+            if (!isLocked && isCompleted) {
                 statusText = '✓ Complete';
-            } else {
-                // Show progress icons
+            } else if (!isLocked) {
                 const videoIcon = isVideoWatched ? '📹✓' : '📹';
                 const quizIcon = isQuizPassed ? '📝✓' : '📝';
                 statusIcons = `<span class="curriculum-icons">${videoIcon} ${quizIcon}</span>`;
-                if (isCurrent) {
-                    statusText = 'Continue';
-                }
+                if (isCurrent) statusText = 'Continue';
             }
-            
+
             item.innerHTML = `
                 <span class="curriculum-number">${isCompleted && !isLocked ? '✓' : lesson.id}</span>
                 <div class="curriculum-info">
                     <div class="curriculum-title">${lesson.title}</div>
                     <div class="curriculum-topic">${lesson.topic}</div>
                 </div>
-                ${isLocked 
-                    ? '<span class="lock-icon">🔒</span>' 
-                    : (isCompleted 
+                ${isLocked
+                    ? '<span class="lock-icon">🔒</span>'
+                    : (isCompleted
                         ? `<span class="curriculum-status">${statusText}</span>`
                         : `<span class="curriculum-progress">${statusIcons}${statusText ? `<span class="curriculum-status">${statusText}</span>` : ''}</span>`)}
             `;
-            
+
             if (!isLocked) {
                 item.addEventListener('click', () => this.openLesson(lesson));
             }
-            
+
             this.curriculumList.appendChild(item);
         });
     }
-    
+
     // ==========================================
     // VIDEO LESSON
     // ==========================================
-    
+
     openLesson(lesson) {
         this.currentLesson = lesson;
-        
+
         this.lessonNumber.textContent = `Lesson ${lesson.id}`;
         this.lessonTitle.textContent = lesson.title;
         this.lessonDescription.textContent = lesson.description;
-        
-        // Reset video state
+
         if (this.ytPlayer) {
             this.ytPlayer.destroy();
             this.ytPlayer = null;
         }
         this.stopWatchTracking();
-        
-        // Reset placeholder
+
         this.videoPlaceholder.innerHTML = `
             <span class="play-icon">▶</span>
             <span>Click to load video</span>
@@ -492,13 +477,11 @@ class DataScienceCourse {
         this.videoPlaceholder.style.display = '';
         this.youtubePlayerContainer.style.display = 'none';
         this.youtubePlayerContainer.innerHTML = '';
-        
-        // Update lesson progress indicators
+
         this.updateLessonProgress();
-        
         this.showScreen(this.lessonScreen);
     }
-    
+
     loadVideo() {
         if (!this.currentLesson) return;
         
@@ -506,13 +489,12 @@ class DataScienceCourse {
             if (this.ytApiReady) {
                 this.createYouTubePlayer(this.currentLesson.videoId);
             } else {
-                // API not ready yet, use fallback iframe
                 this.videoPlaceholder.style.display = 'none';
                 this.youtubePlayerContainer.style.display = 'block';
                 this.youtubePlayerContainer.innerHTML = `
-                    <iframe 
-                        width="100%" 
-                        height="100%" 
+                    <iframe
+                        width="100%"
+                        height="100%"
                         src="https://www.youtube.com/embed/${this.currentLesson.videoId}?autoplay=1"
                         frameborder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -535,7 +517,6 @@ class DataScienceCourse {
     // ==========================================
     
     startLessonQuiz() {
-        // Set up quiz for the current lesson's topic
         this.selectedTopics = new Set([this.currentLesson.topic]);
         this.selectQuestions();
         this.startQuiz();
@@ -552,7 +533,38 @@ class DataScienceCourse {
         this.startQuiz();
     }
     
+    todayKey() {
+        const d = new Date();
+        return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    }
+
+    quizzesTakenToday() {
+        try {
+            const data = JSON.parse(localStorage.getItem(DAILY_LIMIT_KEY) || 'null');
+            return data && data.date === this.todayKey() ? data.count : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    recordQuizAttempt() {
+        try {
+            localStorage.setItem(DAILY_LIMIT_KEY, JSON.stringify({
+                date: this.todayKey(),
+                count: this.quizzesTakenToday() + 1
+            }));
+        } catch (e) {
+            console.error('Error saving daily quiz count:', e);
+        }
+    }
+
     startQuiz() {
+        if (this.quizzesTakenToday() >= 5) {
+            alert('Daily limit reached. Try again tomorrow.');
+            return;
+        }
+        this.recordQuizAttempt();
+
         this.currentQuestionIndex = 0;
         this.score = 0;
         this.userAnswers = [];
@@ -710,8 +722,7 @@ class DataScienceCourse {
         // Course mode: mark quiz as passed if score >= 80% (8/10)
         if (this.currentMode === 'course' && this.currentLesson && percentage >= 80) {
             this.markLessonComplete(this.currentLesson.id);
-            
-            // Check if fully complete (video watched + quiz passed)
+
             const videoWatched = this.isVideoWatched(this.currentLesson.id);
             if (videoWatched) {
                 this.topicCompleteMsg.innerHTML = '<span class="complete-icon">✓</span><span>Topic fully complete!</span>';
@@ -824,6 +835,7 @@ class DataScienceCourse {
         
         // Go back to appropriate screen
         if (this.currentMode === 'course') {
+            this.updateLessonProgress();
             this.showScreen(this.lessonScreen);
         } else {
             this.showScreen(this.practiceScreen);
@@ -1761,6 +1773,7 @@ class DataScienceCourse {
             try {
                 localStorage.removeItem(STORAGE_KEY);
                 localStorage.removeItem(COURSE_PROGRESS_KEY);
+                localStorage.removeItem(DAILY_LIMIT_KEY);
                 this.courseProgress = { completed: [], currentLesson: 1 };
                 this.updateStatsDisplay();
                 this.updateModeScreenPreviews();
