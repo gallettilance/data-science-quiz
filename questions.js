@@ -214,6 +214,70 @@ const QUESTIONS = [
         explanation: "Moving a point orthogonal to the dotted line changes the covariance and standard deviations the most, so r changes the most.",
         image: "images/correlation/5.png"
     },
+    {
+        id: "correlation-25",
+        topic: "Correlation",
+        question: "Two datasets each have features $x$ and $y$. In the first, the correlation is $-1$. In the second, it is $1$. The two datasets are stacked into one. What can be said about the correlation of the combined dataset?",
+        answer: "It cannot be determined from this information: it may be positive, negative, or zero",
+        alternatives: ["It is 0", "It is positive", "It is negative"],
+        explanation: "Stacking a perfect negative relationship with a perfect positive one does not fix the sign of the combined correlation. The result depends on the means, scales, and relative sizes of the two pieces, so the combined $r$ may be positive, negative, or zero."
+    },
+    {
+        id: "correlation-26",
+        topic: "Correlation",
+        question: "$X$ and $Y$ have correlation coefficient $r$. Suppose you multiply every value of $X$ by $-3$. What happens to the correlation?",
+        answer: "$r$ changes sign",
+        alternatives: ["$r$ is unchanged", "the absolute value of $r$ is multiplied by 3", "$r$ becomes 0"],
+        explanation: "A positive rescaling leaves $r$ unchanged, but a negative scale flips its sign. Multiplying $X$ by $-3$ replaces $r$ with $-r$. The factor $3$ does not change $|r|$."
+    },
+    {
+        id: "correlation-27",
+        topic: "Correlation",
+        question: "If $X$ and $Y$ have correlation 0, and $Y$ and $Z$ have correlation 0, then $X$ and $Z$ must have correlation 0.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Zero correlation is not transitive. For example, $X = \\cos t$, $Y = \\sin t$, and $Z = \\cos t$ can give $\\mathrm{corr}(X,Y) = \\mathrm{corr}(Y,Z) = 0$ while $\\mathrm{corr}(X,Z) = 1$."
+    },
+    {
+        id: "correlation-28",
+        topic: "Correlation",
+        question: "A positive correlation between daily temperature and daily ice cream sales can become negative after both series are averaged by week.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Aggregating to a coarser time unit can reverse the sign of a correlation. Weekly averages of two daily series need not keep the daily sign; this is the same phenomenon as Simpson's paradox."
+    },
+    {
+        id: "correlation-29",
+        topic: "Correlation",
+        question: "The correlation coefficient of $y = 2x + 3$ for $x \\in [0, 5]$ is:",
+        answer: "1",
+        alternatives: ["0", "$-1$", "$1/2$", "$-1/2$"],
+        explanation: "$y = 2x + 3$ is a perfect positive line. Pearson correlation is invariant to positive scaling and to adding a constant, so $r = 1$."
+    },
+    {
+        id: "correlation-30",
+        topic: "Correlation",
+        question: "$Y = X + \\text{noise}$, with noise independent of $X$ and mean 0. If the variance of the noise grows while the variance of $X$ stays fixed, the correlation between $X$ and $Y$ gets smaller.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "With noise independent of $X$, $\\mathrm{corr}(X,Y) = \\sigma_X / \\sqrt{\\sigma_X^2 + \\sigma_{\\text{noise}}^2}$. Raising the noise variance, with $\\sigma_X$ fixed, shrinks this ratio."
+    },
+    {
+        id: "correlation-31",
+        topic: "Correlation",
+        question: "A cloud of points has no linear pattern. Adding one point far away, up and to the right of the cloud, can make the correlation large.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Pearson correlation is sensitive to leverage points. One point far up and to the right of an otherwise unstructured cloud can dominate the covariance and produce a large positive $r$."
+    },
+    {
+        id: "correlation-32",
+        topic: "Correlation",
+        question: "If $x$ and $y$ have correlation $r$, then $x$ and $-2y$ have correlation $-r$.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Multiplying one variable by a negative constant flips the sign of $r$ and does not change its absolute value. So $x$ and $-2y$ have correlation $-r$."
+    },
     // ==========================================
     // DISTANCE AND SIMILARITY
     // ==========================================
@@ -378,6 +442,68 @@ const QUESTIONS = [
         answer: "False",
         alternatives: ["True"],
         explanation: "Cosine distance $d(u,v)=1-\\cos\\angle(u,v)$ need not satisfy the triangle inequality. Counterexample in $\\mathbb{R}^2$: take $u=(1,0)$, $v=(1,1)$, $w=(0,1)$. Then $d(u,v)=d(v,w)=1-1/\\sqrt{2}\\approx 0.29$, but $d(u,w)=1$, and $0.29+0.29<1$, so $d(u,w)>d(u,v)+d(v,w)$. Cosine distance is still widely used in retrieval when angular closeness is what matters."
+    },
+    {
+        id: "distance-21",
+        topic: "Distance Functions",
+        question: "Two points in $n$-dimensional space differ in exactly one coordinate. Which statement is true of their Minkowski distances?",
+        answer: "$L_1 = L_2 = L_\\infty$",
+        alternatives: ["$L_1 < L_2 < L_\\infty$", "$L_2 < L_\\infty < L_1$", "$L_1 = L_2$, but $L_\\infty$ is larger"],
+        explanation: "If the points differ by $d$ in a single coordinate and agree everywhere else, every Minkowski $p$-norm of that difference equals $|d|$. So $L_1$, $L_2$, and $L_\\infty$ are the same."
+    },
+    {
+        id: "distance-22",
+        topic: "Distance Functions",
+        question: "Two points that differ a little in every coordinate can have a smaller $L_\\infty$ distance than two points that differ a lot in only one coordinate, even when the first pair is farther apart in Euclidean distance.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "$L_\\infty$ looks only at the largest coordinate gap, so it can rank a one-coordinate gap above a longer Euclidean pair. Example: $(0,0,0)$ and $(2,2,2)$ have $L_\\infty = 2$ and $L_2 = \\sqrt{12}$; $(0,0,0)$ and $(3,0,0)$ have $L_\\infty = 3$ and $L_2 = 3$."
+    },
+    {
+        id: "distance-23",
+        topic: "Distance Functions",
+        question: "Graders score each student answer by its Euclidean distance from one long model answer, encoded as a word-count vector over a shared vocabulary. What could go wrong?",
+        answer: "A correct but shorter answer is penalized because the extra length of the model answer adds distance",
+        alternatives: [
+            "A short answer that uses the right words scores about as well as the long model answer",
+            "The comparison cannot be computed unless the two answers have the same number of words"
+        ],
+        explanation: "Both answers are vectors in the same vocabulary, so the distance is defined even when the word counts differ. Extra counts in the long model answer increase the Euclidean distance, so a correct but shorter answer is penalized for length rather than for using the wrong words."
+    },
+    {
+        id: "distance-24",
+        topic: "Distance Functions",
+        question: "The distance from stop $A$ to itself is 0. The route from $A$ out to stop $B$ and back has length $d(A,B) + d(B,A)$, which can be positive. Which statement is right?",
+        answer: "This is fine: the distance is the shortest route, so a detour through $B$ can be longer than the distance",
+        alternatives: [
+            "This is impossible: if any route has positive length, the distance cannot be 0",
+            "This is fine only because the return trip is allowed to have negative length"
+        ],
+        explanation: "A distance is the length of the shortest route, not the length of every route. The stay-at-$A$ route has length 0, while the detour through $B$ can be longer. The return trip does not need a negative length."
+    },
+    {
+        id: "distance-25",
+        topic: "Distance Functions",
+        question: "Rotating a triangle by $45^\\circ$ preserves both the L1 and the L2 lengths of its sides.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Euclidean distance is rotation-invariant, so the L2 side lengths stay the same. Manhattan distance is not: a $45^\\circ$ rotation changes how much of each side lies along the coordinate axes, so the L1 lengths change."
+    },
+    {
+        id: "distance-26",
+        topic: "Distance Functions",
+        question: "In any number of dimensions, the Euclidean distance between two points is less than or equal to the Manhattan distance.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "For a difference vector, $\\sqrt{\\sum_i x_i^2} \\le \\sum_i |x_i|$. Equality holds when the points differ in at most one coordinate. So Euclidean distance is always at most Manhattan distance."
+    },
+    {
+        id: "distance-27",
+        topic: "Distance Functions",
+        question: "One hundred pumps must use exactly $X$ units of power in total, and every pump's power is nonnegative. Which score stays the same no matter how that power is split?",
+        answer: "the $\\ell_1$ norm of the power vector",
+        alternatives: ["the $\\ell_2$ norm of the power vector", "both"],
+        explanation: "Nonnegative amounts that sum to $X$ have $\\ell_1$ norm $X$, so the split does not matter. The $\\ell_2$ norm is smaller when the power is spread out and larger when it is concentrated, so it does change."
     },
     // ==========================================
     // K-MEANS CLUSTERING
@@ -624,6 +750,63 @@ const QUESTIONS = [
         alternatives: ["10", "14.5", "16.25", "24"],
         explanation: "For worst-case initialization among centroid pairs from the data, x must exceed approximately 14.75 so that no run leaves x grouped with points to its left without eventually isolating x."
     },
+    {
+        id: "kmeans-30",
+        topic: "K-Means",
+        question: "Consider the dataset $\\{2, 4, 6, x\\}$. With $k=2$, what is the smallest value of $x$ ($x > 6$) beyond which $x$ will always be alone in its own cluster?",
+        answer: "12",
+        alternatives: ["8", "10", "14", "18"],
+        explanation: "The fit that pairs $x$ with $6$ uses centroids $3$ for $\\{2, 4\\}$ and $(6+x)/2$ for $\\{6, x\\}$. At $x = 10$ that second centroid is $8$, and $6$ is closer to $8$ than to $3$, so $x$ is not forced out. Point $6$ prefers $3$ only once $x > 12$. Beyond that, the stable fit leaves $x$ alone."
+    },
+    {
+        id: "kmeans-31",
+        topic: "K-Means",
+        question: "Points: $(0,0)$, $(1,0)$, $(2,0)$, $(3,0)$, $(4,0)$, $(0,3)$, $(1,3)$. K-means with $k=2$ starts at centroids $(0,0)$ and $(3,0)$. What are the final centroids?",
+        answer: "$(0.5, 1.5)$ and $(3, 0)$",
+        alternatives: ["$(2, 0)$ and $(0.5, 3)$", "$(1, 0)$ and $(3, 0)$", "$(0.5, 1.5)$ and $(4, 0)$"],
+        explanation: "The first assignment puts $(0,0)$, $(1,0)$, $(0,3)$, and $(1,3)$ with $(0,0)$, and puts $(2,0)$, $(3,0)$, and $(4,0)$ with $(3,0)$. Those means are $(0.5, 1.5)$ and $(3, 0)$. Reassignment leaves the same groups, so the horizontal line is split rather than separated from the two points above it."
+    },
+    {
+        id: "kmeans-32",
+        topic: "K-Means",
+        question: "In Lloyd's algorithm, shuffling the order of the points while keeping the same initial centroids can change the final clusters.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Lloyd's algorithm assigns every point to the nearest centroid and then replaces each centroid by the mean of its points. Neither step depends on the order of the points, so the same initial centroids produce the same final clusters."
+    },
+    {
+        id: "kmeans-33",
+        topic: "K-Means",
+        question: "Distance from the center separates these concentric rings. Squashing them into concentric ellipses produces a dataset with features $x'$ and $y'$. Rescaling a feature means subtracting its mean and dividing by its standard deviation. When does rescaling $x'$ and $y'$ restore the separation?",
+        answer: "When $x'$ and $y'$ are not correlated",
+        alternatives: ["Always", "Never"],
+        explanation: "Standardizing each axis undoes a stretch aligned with the axes, which is the case when $x'$ and $y'$ are uncorrelated, and the rings become separable by distance from the center again. If the features are correlated, the ellipse is rotated and per-coordinate rescaling does not restore the circles.",
+        image: "images/kmeans/4.png"
+    },
+    {
+        id: "kmeans-34",
+        topic: "K-Means",
+        question: "K-means puts each center at the mean of its points. A few extreme points can therefore drag a center away from the dense group those points were attached to.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The mean is not robust. A few points far from a dense group pull the centroid toward themselves, even when most of the assigned points sit elsewhere."
+    },
+    {
+        id: "kmeans-35",
+        topic: "K-Means",
+        question: "If K-means uses Manhattan distance, the center of each cluster is still the mean of the points in that cluster.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "The mean minimizes squared Euclidean distance. With Manhattan distance, the update that minimizes total distance is a median in each coordinate, not the mean."
+    },
+    {
+        id: "kmeans-36",
+        topic: "K-Means",
+        question: "Lloyd's algorithm still converges from a poor initialization.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Each Lloyd iteration does not increase the K-means cost, and there are finitely many assignments. A poor initialization can converge to a bad local solution, but the algorithm still converges."
+    },
     // ==========================================
     // HIERARCHICAL CLUSTERING
     // ==========================================
@@ -778,6 +961,48 @@ const QUESTIONS = [
         alternatives: ["Treat income and age as equally influential regardless of scale", "Automatically rescale columns inside the linkage step", "Always produce the same merge order as standardized clustering"],
         explanation: "Euclidean distance sums squared differences across features; large-variance columns dominate unless you standardize, rescale manually, or use a distance that neutralizes scale."
     },
+    {
+        id: "hierarchical-20",
+        topic: "Hierarchical Clustering",
+        question: "Divisive hierarchical clustering has to call DBSCAN to split a cluster in two, because K-means cannot be asked for exactly two clusters.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "A divisive step only needs some way to split one cluster into two. K-means can be run with $k = 2$. It does not have to be DBSCAN."
+    },
+    {
+        id: "hierarchical-21",
+        topic: "Hierarchical Clustering",
+        question: "With the cut shown, which other point is in the same cluster as point 2?",
+        answer: "only 1",
+        alternatives: ["only 5", "1 and 5", "none of the labeled points"],
+        explanation: "The cut passes through the branch that joins 1 and 2, below the merge of that pair with 5. Point 2 is therefore in a cluster with 1 only.",
+        image: "images/hierarchical/3.png"
+    },
+    {
+        id: "hierarchical-22",
+        topic: "Hierarchical Clustering",
+        question: "Complete-link is a better choice than single-link for the long horizontal group in this figure.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "The long group is a chain. Single-link merges on the nearest pair, so it can follow that chain. Complete-link uses the farthest pair and tends to cut an elongated group apart.",
+        image: "images/hierarchical/1.png"
+    },
+    {
+        id: "hierarchical-23",
+        topic: "Hierarchical Clustering",
+        question: "Four points lie on a line: $A$ at 0, $B$ at 1, $C$ at 4, and $D$ at 6. Both single-link and complete-link first merge $A$ with $B$ and $C$ with $D$. At what distance do those two pairs then merge into one cluster?",
+        answer: "Single-link at 3, complete-link at 6",
+        alternatives: ["Single-link at 6, complete-link at 3", "Both at 3", "Both at 6"],
+        explanation: "After the pairs $\\{A,B\\}$ and $\\{C,D\\}$ form, single-link uses the closest cross-pair, $B$ to $C$, which is $3$. Complete-link uses the farthest cross-pair, $A$ to $D$, which is $6$."
+    },
+    {
+        id: "hierarchical-24",
+        topic: "Hierarchical Clustering",
+        question: "Standardizing a column means subtracting its mean and dividing by its standard deviation, so the column has mean 0 and variance 1. Doing that to income and to age, before Euclidean hierarchical clustering, removes the advantage income had only because its raw numbers were on a much larger scale than age.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "Euclidean distance is dominated by the column with the larger raw spread. Standardizing income and age to mean 0 and variance 1 puts them on the same scale, so income no longer wins just because it was measured in larger numbers."
+    },
     // ==========================================
     // DBSCAN CLUSTERING
     // ==========================================
@@ -908,6 +1133,47 @@ const QUESTIONS = [
         explanation: "Single-link and related hierarchical methods can trace elongated structure; K-means assumes roughly spherical clusters.",
         image: "images/kmeans/2.png"
     },
+    {
+        id: "dbscan-16",
+        topic: "DBSCAN",
+        question: "DBSCAN requires you to choose $\\epsilon$ and minPts. It does not require you to choose the number of clusters.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "DBSCAN's inputs are the neighborhood radius $\\epsilon$ and the core-point threshold minPts. The number of clusters is an output: it is however many density-connected components those parameters produce."
+    },
+    {
+        id: "dbscan-17",
+        topic: "DBSCAN",
+        question: "Keeping $\\epsilon$ the same and increasing minPts decreases the number of noise points.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Raising minPts makes it harder for a point to be a core point. Points that qualified before can fall short and become noise, so the number of noise points cannot decrease."
+    },
+    {
+        id: "dbscan-18",
+        topic: "DBSCAN",
+        question: "If two dense regions are close enough, DBSCAN may merge them into one cluster even though they have different densities.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "DBSCAN uses one $\\epsilon$ and one minPts for the whole dataset. If two dense regions are within $\\epsilon$ of each other through core points, they are density-connected and merge, even when one region is denser than the other."
+    },
+    {
+        id: "dbscan-19",
+        topic: "DBSCAN",
+        question: "K-means is a better choice than DBSCAN for the two curved groups in this figure.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "K-means looks for compact groups around centroids, so it cuts across these curves. DBSCAN can follow each curve as its own density-connected cluster.",
+        image: "images/kmeans/2.png"
+    },
+    {
+        id: "dbscan-20",
+        topic: "DBSCAN",
+        question: "In one dimension, if two points are more than $\\epsilon$ apart, DBSCAN cannot put them in the same cluster, no matter what other points lie between them.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "Density-reachability chains. If core points are spaced at most $\\epsilon$ apart between the two endpoints, DBSCAN connects them into one cluster even though the endpoints themselves are more than $\\epsilon$ apart."
+    },
     // ==========================================
     // GMM (Gaussian Mixture Models)
     // ==========================================
@@ -974,6 +1240,62 @@ const QUESTIONS = [
         answer: "True",
         alternatives: ["False"],
         explanation: "K-means provides good initial cluster assignments. GMM can then refine these with soft assignments and covariance estimation."
+    },
+    {
+        id: "gmm-9",
+        topic: "GMM",
+        question: "If you must stop EM in the middle of an iteration, stopping right after the expectation step leaves you with a higher likelihood than stopping right after the maximization step. The expectation step is the one that improves the likelihood.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "The E step updates responsibilities for a fixed set of parameters, so the data likelihood does not change. The M step updates the parameters and is the step that can raise the likelihood. The checkpoint after M is the better one."
+    },
+    {
+        id: "gmm-10",
+        topic: "GMM",
+        question: "The EM algorithm behind a GMM looks for the parameters of a mixture of Normal distributions that maximize the likelihood of the data.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "A GMM is a weighted mixture of Normal components. EM searches for the means, covariances, and mixing weights of that mixture that maximize the likelihood. It is not fitting a single Normal."
+    },
+    {
+        id: "gmm-11",
+        topic: "GMM",
+        question: "With $k=2$, each component allowed its own full covariance, and EM initialized by K-means, which dataset will never produce a stable fit that is worse than another fit?",
+        answer: "Two tight, equally sized groups, far apart",
+        alternatives: [
+            "Four tight, equally sized groups at the corners of a rectangle that is wider than it is tall",
+            "Three tight, equally sized groups in a line, with the middle group closer to the left group than to the right",
+            "None of the above. A GMM can always reach a stable fit that is not globally optimal"
+        ],
+        explanation: "K-means initialization on two tight groups that are far apart has only one sensible partition, and EM stays there. The rectangle and the uneven line each have a worse stable pairing. A GMM does not always have a suboptimal stable fit."
+    },
+    {
+        id: "gmm-12",
+        topic: "GMM",
+        question: "A dataset has only one outlier. Evaluated at that outlier, the density of every cluster is small, unless that outlier is placed in a cluster by itself.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "A Normal component fitted to a group away from the outlier is small at that outlier. The density there is large only if some component is centered on the outlier itself, which means that point is its own cluster."
+    },
+    {
+        id: "gmm-13",
+        topic: "GMM",
+        question: "A GMM reports a likelihood of 40. The fit has failed: a likelihood cannot exceed 1 unless a component has collapsed onto a single point.",
+        answer: "False",
+        alternatives: ["True"],
+        explanation: "A likelihood is a product of densities, and a Normal density can be larger than 1. A value such as 40 can be a healthy fit. Collapse is the unbounded case, where a component's variance goes to 0 and the likelihood goes to infinity. It is not every value above 1."
+    },
+    {
+        id: "gmm-14",
+        topic: "GMM",
+        question: "A GMM that forces every component to be spherical (the same variance in every direction) is fit with $k=3$ to one long, thin cloud. What should you expect?",
+        answer: "The three round components line up along the cloud and split it into pieces",
+        alternatives: [
+            "One component covers the whole cloud, and the other two are left empty",
+            "The fit is rejected because a spherical component cannot be used on non-round data",
+            "The three components all sit on top of each other at the cloud's center"
+        ],
+        explanation: "Spherical components cannot stretch along a long cloud. With $k=3$, the fit places the three round components along the cloud and splits it into pieces."
     },
     // ==========================================
     // CLUSTERING EVALUATION
@@ -1045,6 +1367,22 @@ const QUESTIONS = [
         alternatives: ["0", "6", "30"],
         explanation: "Count disagreeing pairs between the two clusterings shown.",
         image: "images/evaluation/3.png"
+    },
+    {
+        id: "clustereval-9",
+        topic: "Clustering Evaluation",
+        question: "You run K-means for several values of $k$ and compare the costs of the clusterings it returns. Each cost is the sum of squared distances from the points to the centers in that output. A smaller cost at a larger $k$ is not, by itself, a reason to prefer that output.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "The K-means cost cannot rise when $k$ grows, because extra centers can only fit the points more tightly. A smaller cost at a larger $k$ is expected, so it is not evidence that this $k$ is the right one."
+    },
+    {
+        id: "clustereval-10",
+        topic: "Clustering Evaluation",
+        question: "None of the clustering algorithms we've talked about in this class can produce a silhouette score of $-1$.",
+        answer: "True",
+        alternatives: ["False"],
+        explanation: "A silhouette of $-1$ requires a point whose distance to the nearest other cluster is 0 while its distance to its own cluster is positive. K-means, hierarchical clustering, and DBSCAN do not return that configuration."
     },
     // ==========================================
     // SVD (Singular Value Decomposition)
@@ -1557,7 +1895,7 @@ const QUESTIONS = [
         question: "Should we expand or retract this SVM?",
         answer: "Neither",
         alternatives: ["Expand", "Retract"],
-        explanation: "The SVM is already optimal (maximum margin with all constraints satisfied).",
+        explanation: "The SVM needs to be shifted as it does not pass through the midpoint of the two support vectors.",
         image: "images/svm/3.png"
     },
     {
