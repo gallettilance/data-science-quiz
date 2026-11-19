@@ -783,11 +783,14 @@ class DataScienceCourse {
             const difficultyHtml = this.formatDifficultyBadge(difficulty);
             
             item.innerHTML = `
-                <div class="review-header">
+                <div class="review-header" style="align-items: flex-start;">
                     <span class="review-status ${statusClass}">${statusIcon}</span>
-                    <span class="review-question">${index + 1}. ${questionPreview}</span>
+                    <span class="review-question" style="display: flex; gap: 0.35em; line-height: 1.5rem;">
+                        <span class="review-question-number" style="flex-shrink: 0;">${index + 1}.</span>
+                        <span class="review-question-text">${questionPreview}</span>
+                    </span>
                     ${difficultyHtml}
-                    <span class="review-toggle">▼</span>
+                    <span class="review-toggle" style="line-height: 1.5rem;">▼</span>
                 </div>
                 <div class="review-body">
                     ${answer.question.image ? `<div class="review-image"><img src="${answer.question.image}" alt="Question diagram"></div>` : ''}
@@ -815,9 +818,18 @@ class DataScienceCourse {
             `;
             
             const header = item.querySelector('.review-header');
+            const questionTextElement = item.querySelector('.review-question-text');
+            const difficultyElement = item.querySelector('.review-difficulty');
+            
+            // Make sure difficulty sticks to the top when expanding instead of glitching down
+            if (difficultyElement) difficultyElement.style.marginTop = '0.1rem';
+
             header.addEventListener('click', () => {
                 item.classList.toggle('expanded');
-                if (item.classList.contains('expanded') && window.MathJax) {
+                const isExpanded = item.classList.contains('expanded');
+                
+                questionTextElement.innerHTML = isExpanded ? answer.question.question : questionPreview;
+                if (window.MathJax) {
                     MathJax.typesetPromise([item]).catch(err => console.log('MathJax:', err));
                 }
             });
